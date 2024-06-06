@@ -11,9 +11,12 @@ COPY ./src/adservice/gradle ./gradle
 
 RUN ./gradlew
 RUN ./gradlew downloadRepos
+RUN ./gradlew downloadNewrelic
+RUN ./gradlew unzipNewrelic
 
 COPY ./src/adservice/ ./
 COPY ./pb/ ./proto
+
 RUN ./gradlew installDist -PprotoSourceDir=./proto
 
 # -----------------------------------------------------------------------------
@@ -25,7 +28,7 @@ WORKDIR /usr/src/app/
 
 COPY --from=builder /usr/src/app/ ./
 ADD --chmod=644 https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v$version/opentelemetry-javaagent.jar /usr/src/app/opentelemetry-javaagent.jar
-ENV JAVA_TOOL_OPTIONS=-javaagent:/usr/src/app/opentelemetry-javaagent.jar
+ENV JAVA_TOOL_OPTIONS=-javaagent:/usr/src/app/newrelic/newrelic.jar
 
 EXPOSE ${AD_SERVICE_PORT}
 ENTRYPOINT [ "./build/install/opentelemetry-demo-ad-service/bin/AdService" ]
