@@ -611,7 +611,7 @@ components:
       - "/flagd-build"
       - "start"
       - "--uri"
-      - "file:/etc/flagd-nr/demo.flagd-nr.json"
+      - "file:./etc/flagd-nr/demo.flagd-nr.json"
     mountedConfigMaps:
       - name: config
         mountPath: /etc/flagd-nr
