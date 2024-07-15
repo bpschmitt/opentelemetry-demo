@@ -4,12 +4,12 @@ components:
       - "/flagd-build"
       - "start"
       - "--uri"
-      - "file:/etc/config/demo.flagd.json"
+      - "file:/etc/config/demo.flagd-nr.json"
     mountedConfigMaps:
       - name: config
         mountPath: /etc/config
         data:
-          demo.flagd.json: |
+          demo.flagd-nr.json: |
             {
               "$schema": "https://flagd.dev/schema/v0/flags.json",
               "flags": {
