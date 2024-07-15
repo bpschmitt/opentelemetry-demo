@@ -611,12 +611,12 @@ components:
       - "/flagd-build"
       - "start"
       - "--uri"
-      - "file:./etc/flagd-nr/demo.flagd-nr.json"
+      - "file:./etc/flagd/demo.flagd.json"
     mountedConfigMaps:
       - name: config
-        mountPath: /etc/flagd-nr
+        mountPath: /etc/flagd
         data:
-          demo.flagd-nr.json: |
+          demo.flagd.json: |
             {
               "$schema": "https://flagd.dev/schema/v0/flags.json",
               "flags": {
