@@ -1,0 +1,1030 @@
+default:
+  # list of environment variables applied to all components
+  env:
+    - name: OTEL_COMPONENT_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: "metadata.labels['app.kubernetes.io/component']"
+    - name: OTEL_SERVICE_NAME
+      value: $(OTEL_COMPONENT_NAME)-otel
+    - name: OTEL_K8S_NAMESPACE
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.namespace
+    - name: OTEL_K8S_NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    - name: OTEL_K8S_POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: OTEL_K8S_POD_UID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+    - name: HOST_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+    - name: OTEL_COLLECTOR_NAME
+      value: '{{ include "otel-demo.name" . }}-otelcol'
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=$(OTEL_SERVICE_NAME),service.instance.id=$(OTEL_K8S_POD_NAME),k8s.pod.uid=$(OTEL_K8S_POD_UID),service.namespace=$(OTEL_K8S_NAMESPACE),k8s.namespace.name=$(OTEL_K8S_NAMESPACE),k8s.node.name=$(OTEL_K8S_NODE_NAME),k8s.pod.name=$(OTEL_K8S_POD_NAME)
+  # Allows overriding and additions to .Values.default.env
+  envOverrides: []
+  #  - name: OTEL_K8S_NODE_NAME
+  #    value: "someConstantValue"
+  image:
+    repository: ghcr.io/open-telemetry/demo
+    # Overrides the image tag whose default is the chart appVersion.
+    # The service's name will be applied to the end of this value.
+    tag: ""
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  # Default # of replicas for all components
+  replicas: 1
+  # Default schedulingRules for all components
+  schedulingRules:
+    nodeSelector: {}
+    affinity: {}
+    tolerations: []
+  # Default securityContext for all components
+  securityContext: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+opentelemetry-collector:
+    enabled: true
+    nameOverride: otelcol
+    mode: deployment
+    presets:
+      kubernetesAttributes:
+        enabled: true
+      hostMetrics:
+        enabled: true
+    resources:
+      limits:
+        memory: 768Mi
+    service:
+      type: ClusterIP
+    ports:
+      metrics:
+        enabled: true
+      prometheus:
+        enabled: true
+        containerPort: 9464
+        servicePort: 9464
+        protocol: TCP
+    podAnnotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9464"
+      opentelemetry_community_demo: "true"
+    config:
+      extensions:
+        health_check: {}
+        zpages: {}
+      receivers:
+        otlp:
+          protocols:
+            http:
+              # Since this collector needs to receive data from the web, enable cors for all origins
+              # `allowed_origins` can be refined for your deployment domain
+              cors:
+                allowed_origins:
+                  - "http://*"
+                  - "https://*"
+        prometheus:
+          config:
+            scrape_configs:
+              - job_name: kubernetes-kube-state-metrics
+
+                kubernetes_sd_configs:
+                  - role: endpoints
+
+                relabel_configs:
+                  - action: keep
+                    regex: true
+                    source_labels:
+                      - __meta_kubernetes_service_annotation_prometheus_io_scrape
+                  - action: drop
+                    regex: true
+                    source_labels:
+                      - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+                  - action: replace
+                    regex: (https?)
+                    source_labels:
+                      - __meta_kubernetes_service_annotation_prometheus_io_scheme
+                    target_label: __scheme__
+                  - action: replace
+                    regex: (.+)
+                    source_labels:
+                      - __meta_kubernetes_service_annotation_prometheus_io_path
+                    target_label: __metrics_path__
+                  - action: replace
+                    regex: (.+?)(?::\d+)?;(\d+)
+                    replacement: $1:$2
+                    source_labels:
+                      - __address__
+                      - __meta_kubernetes_service_annotation_prometheus_io_port
+                    target_label: __address__
+                  - action: keep
+                    regex: kube-state-metrics
+                    source_labels:
+                      - __meta_kubernetes_service_name
+                  - action: replace
+                    source_labels:
+                      - __meta_kubernetes_namespace
+                    target_label: namespace
+                  - action: replace
+                    source_labels:
+                      - __meta_kubernetes_service_name
+                    target_label: service
+                  - action: replace
+                    source_labels:
+                      - __meta_kubernetes_pod_node_name
+                    target_label: node
+                scrape_interval: 30s
+
+              - job_name: kubernetes-cadvisor
+
+                kubernetes_sd_configs:
+                  - role: node
+
+                scheme: https
+                metrics_path: /metrics/cadvisor
+                tls_config:
+                  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                  insecure_skip_verify: true
+                authorization:
+                  credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+                
+                relabel_configs:
+                  - action: labelmap
+                    regex: __meta_kubernetes_node_label_(.+)
+                scrape_interval: 30s
+
+              # - job_name: kubernetes-node-exporter
+
+              #   kubernetes_sd_configs:
+              #     - role: endpoints
+
+              #   relabel_configs:
+              #     - action: keep
+              #       regex: true
+              #       source_labels:
+              #         - __meta_kubernetes_service_annotation_prometheus_io_scrape
+              #     - action: drop
+              #       regex: true
+              #       source_labels:
+              #         - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+              #     - action: replace
+              #       regex: (https?)
+              #       source_labels:
+              #         - __meta_kubernetes_service_annotation_prometheus_io_scheme
+              #       target_label: __scheme__
+              #     - action: replace
+              #       regex: (.+)
+              #       source_labels:
+              #         - __meta_kubernetes_service_annotation_prometheus_io_path
+              #       target_label: __metrics_path__
+              #     - action: replace
+              #       regex: (.+?)(?::\d+)?;(\d+)
+              #       replacement: $1:$2
+              #       source_labels:
+              #         - __address__
+              #         - __meta_kubernetes_service_annotation_prometheus_io_port
+              #       target_label: __address__
+              #     - action: keep
+              #       regex: node-exporter-prometheus-node-exporter
+              #       source_labels:
+              #         - __meta_kubernetes_service_name
+              #     - action: replace
+              #       source_labels:
+              #         - __meta_kubernetes_namespace
+              #       target_label: namespace
+              #     - action: replace
+              #       source_labels:
+              #         - __meta_kubernetes_service_name
+              #       target_label: service
+              #     - action: replace
+              #       source_labels:
+              #         - __meta_kubernetes_pod_node_name
+              #       target_label: node
+              #   scrape_interval: 30s
+
+              # - job_name: "kubernetes-service-endpoints"
+
+              #   kubernetes_sd_configs:
+              #     - role: endpoints
+
+              #   relabel_configs:
+              #     # Example relabel to scrape only endpoints that have
+              #     # "example.io/should_be_scraped = true" annotation.
+              #     - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+              #       action: keep
+              #       regex: true
+              #     - action: labelmap
+              #       regex: __meta_kubernetes_service_label_(.+)
+              #     - source_labels: [__meta_kubernetes_namespace]
+              #       action: replace
+              #       target_label: namespace
+              #     - source_labels: [__meta_kubernetes_service_name]
+              #       action: replace
+              #       target_label: service
+
+      exporters:
+        otlp:
+          endpoint: 'otlp.nr-data.net:4317'
+          tls:
+            insecure: false
+          headers:
+            api-key: $NEW_RELIC_LICENSE_KEY
+
+      processors:
+        batch:
+          send_batch_size: 1000
+          send_batch_max_size: 1000
+        cumulativetodelta: {}
+        resource:
+          attributes:
+            - key: host.id
+              from_attribute: host.name
+              action: upsert
+            - key: k8s.cluster.name
+              value: otel-community-demo
+              action: insert
+        resource/collector:
+          attributes:
+            - key: service.instance.id
+              value: $POD_NAME
+              action: upsert
+        resourcedetection:
+          detectors: [env]
+        k8sattributes:
+          auth_type: "serviceAccount"
+          passthrough: false
+          filter:
+            node_from_env_var: KUBE_NODE_NAME
+          extract:
+            metadata:
+              - k8s.pod.name
+              - k8s.pod.uid
+              - k8s.deployment.name
+              - k8s.namespace.name
+              - k8s.node.name
+              - k8s.pod.start_time
+          pod_association:
+            - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+        # Include filter example
+        # filter/include_metrics:
+        #   error_mode: ignore
+        #   metrics:
+        #     include:
+        #       match_type: regexp
+        #       metric_names:
+        #         - node_cpu_.*
+        #         - node_load.*
+        #         - node_memory_.*
+        #         - container_cpu.*
+        #         - container_memory_.*
+        #         - kube_.*
+        #         - system.*
+        memory_limiter: null
+        transform:
+          log_statements:
+          - context: log
+            statements:
+              # The OpenTelemetry log SDK says the trace context should be encoded in trace_id and span_id,
+              # but New Relic conventions expects the fields to be dot delimited trace.id and span.id. We
+              # use the transform processor to replace trace_id => trace.id, span_id => span.id.
+              # https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/README.md#trace-context-in-legacy-formats
+              - replace_pattern(body, "\"trace_id\":", "\"trace.id\":")
+              - replace_pattern(body, "\"span_id\":", "\"span.id\":")
+              - truncate_all(attributes, 4095)
+              - truncate_all(resource.attributes, 4095)
+          metric_statements:
+            - context: metric
+              statements:
+                - set(description, "Measures the duration of inbound HTTP requests") where name == "http.server.duration"
+          trace_statements:
+            - context: span
+              statements:
+                - truncate_all(attributes, 4095)
+                - truncate_all(resource.attributes, 4095)
+        metricstransform:
+          transforms:
+            include: duration
+            action: update
+            new_name: http.server.request.duration
+
+      connectors:
+        spanmetrics/full:
+          namespace: "http.server"
+          histogram:
+            unit: "s"
+            explicit:
+              buckets: [ 10ms, 100ms, 250ms ]
+          dimensions_cache_size: 1500
+          resource_metrics_cache_size: 1600
+
+          # Additional list of dimensions on top of:
+          # - service.name
+          # - span.name
+          # - span.kind
+          # - status.code
+          dimensions:
+            # If the span is missing http.method, the connector will insert
+            # the http.method dimension with value 'GET'.
+            - name: http.method
+              default: GET
+
+            # If a default is not provided, the http.status_code dimension will be omitted
+            # if the span does not contain http.status_code.
+            - name: http.status_code
+
+          # The aggregation temporality of the generated metrics.
+          # Default: "AGGREGATION_TEMPORALITY_CUMULATIVE"
+          aggregation_temporality: "AGGREGATION_TEMPORALITY_DELTA"
+
+          # The period on which all metrics (whose dimension keys remain in cache) will be emitted.
+          # Default: 60s.
+          metrics_flush_interval: 30s
+
+      service:
+        extensions: [health_check, zpages]
+        pipelines:
+          traces:
+            processors: [memory_limiter, resource, resourcedetection, k8sattributes, batch, transform]
+            exporters: [otlp, debug, spanmetrics/full]
+          metrics:
+            receivers: [otlp, spanmetrics/full]
+            processors: [memory_limiter, resource, resourcedetection, k8sattributes, cumulativetodelta, batch, metricstransform, transform]
+            exporters: [otlp]
+          logs:
+            processors: [memory_limiter, resource, batch, transform]
+            exporters: [otlp]
+        # debug logs for the otel collector
+        # telemetry:
+        #   logs:
+        #     level: "debug"
+
+    clusterRole:
+      # Specifies whether a clusterRole should be created
+      create: true
+      # Annotations to add to the clusterRole
+      annotations: {}
+      # The name of the clusterRole to use.
+      # If not set and create is true, a name is generated using the fullname template
+      name: ""
+      # A set of rules as documented here : https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+      rules:
+        - apiGroups: ['']
+          resources: ['pods', 'nodes', 'nodes/metrics', 'namespace', 'services', 'endpoints']
+          verbs: ['get', 'watch', 'list']
+        - nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+          verbs: ["get"]
+
+      clusterRoleBinding:
+        # Annotations to add to the clusterRoleBinding
+        annotations: {}
+        # The name of the clusterRoleBinding to use.
+        # If not set and create is true, a name is generated using the fullname template
+        name: ""
+
+    extraEnvs:
+      - name: NEW_RELIC_LICENSE_KEY
+        valueFrom:
+          secretKeyRef:
+            name: newrelic-key-secret
+            key: new_relic_license_key
+      - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+        value: 'delta'
+
+components:
+  accountingService:
+    enabled: true
+    useDefault:
+      env: true
+    env:
+      - name: KAFKA_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-kafka:9092'
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+      - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+        value: delta
+    resources:
+      limits:
+        memory: 20Mi
+    initContainers:
+      - name: wait-for-kafka
+        image: busybox:latest
+        command: ['sh', '-c', 'until nc -z -v -w30 {{ include "otel-demo.name" . }}-kafka 9092; do echo waiting for kafka; sleep 2; done;']
+
+  adService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: AD_SERVICE_PORT
+        value: "8080"
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+      - name: OTEL_LOGS_EXPORTER
+        value: otlp
+    resources:
+      limits:
+        memory: 300Mi
+
+  cartService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: CART_SERVICE_PORT
+        value: "8080"
+      - name: ASPNETCORE_URLS
+        value: http://*:$(CART_SERVICE_PORT)
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: REDIS_ADDR
+        value: '{{ include "otel-demo.name" . }}-redis:6379'
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+    resources:
+      limits:
+        memory: 160Mi
+    initContainers:
+      - name: wait-for-redis
+        image: busybox:latest
+        command: ['sh', '-c', 'until nc -z -v -w30 {{ include "otel-demo.name" . }}-redis 6379; do echo waiting for redis; sleep 2; done;']
+
+  checkoutService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: CHECKOUT_SERVICE_PORT
+        value: "8080"
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: CART_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-cartservice:8080'
+      - name: CURRENCY_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-currencyservice:8080'
+      - name: EMAIL_SERVICE_ADDR
+        value: 'http://{{ include "otel-demo.name" . }}-emailservice:8080'
+      - name: PAYMENT_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-paymentservice:8080'
+      - name: PRODUCT_CATALOG_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-productcatalogservice:8080'
+      - name: SHIPPING_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-shippingservice:8080'
+      - name: KAFKA_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-kafka:9092'
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+    resources:
+      limits:
+        memory: 20Mi
+    initContainers:
+      - name: wait-for-kafka
+        image: busybox:latest
+        command: ['sh', '-c', 'until nc -z -v -w30 {{ include "otel-demo.name" . }}-kafka 9092; do echo waiting for kafka; sleep 2; done;']
+
+  currencyService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: CURRENCY_SERVICE_PORT
+        value: "8080"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+      - name: VERSION
+        value: "{{ .Chart.AppVersion }}"
+    resources:
+      limits:
+        memory: 20Mi
+
+  emailService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: EMAIL_SERVICE_PORT
+        value: "8080"
+      - name: APP_ENV
+        value: production
+      - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318/v1/traces
+    resources:
+      limits:
+        memory: 100Mi
+
+  frauddetectionService:
+    enabled: true
+    useDefault:
+      env: true
+    env:
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: KAFKA_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-kafka:9092'
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+    resources:
+      limits:
+        memory: 300Mi
+    initContainers:
+      - name: wait-for-kafka
+        image: busybox:latest
+        command: ['sh', '-c', 'until nc -z -v -w30 {{ include "otel-demo.name" . }}-kafka 9092; do echo waiting for kafka; sleep 2; done;']
+
+  frontend:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: FRONTEND_PORT
+        value: "8080"
+      - name: FRONTEND_ADDR
+        value: :8080
+      - name: AD_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-adservice:8080'
+      - name: CART_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-cartservice:8080'
+      - name: CHECKOUT_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-checkoutservice:8080'
+      - name: CURRENCY_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-currencyservice:8080'
+      - name: PRODUCT_CATALOG_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-productcatalogservice:8080'
+      - name: RECOMMENDATION_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-recommendationservice:8080'
+      - name: SHIPPING_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-shippingservice:8080'
+      - name: OTEL_COLLECTOR_HOST
+        value: $(OTEL_COLLECTOR_NAME)
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+      - name: WEB_OTEL_SERVICE_NAME
+        value: frontend-web
+      - name: PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+        value: http://localhost:8080/otlp-http/v1/traces             # This expects users to use `kubectl port-forward ...`
+    resources:
+      limits:
+        memory: 200Mi
+    securityContext:
+      runAsUser: 1001  # nextjs
+      runAsGroup: 1001
+      runAsNonRoot: true
+
+  frontendProxy:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: ENVOY_PORT
+        value: "8080"
+      - name: FRONTEND_PORT
+        value: "8080"
+      - name: FRONTEND_HOST
+        value: '{{ include "otel-demo.name" . }}-frontend'
+      - name: LOCUST_WEB_PORT
+        value: "8089"
+      - name: LOCUST_WEB_HOST
+        value: '{{ include "otel-demo.name" . }}-loadgenerator'
+      - name: GRAFANA_SERVICE_PORT
+        value: "80"
+      - name: GRAFANA_SERVICE_HOST
+        value: '{{ include "otel-demo.name" . }}-grafana'
+      - name: JAEGER_SERVICE_PORT
+        value: "16686"
+      - name: JAEGER_SERVICE_HOST
+        value: '{{ include "otel-demo.name" . }}-jaeger-query'
+      - name: OTEL_COLLECTOR_PORT_GRPC
+        value: "4317"
+      - name: OTEL_COLLECTOR_PORT_HTTP
+        value: "4318"
+      - name: OTEL_COLLECTOR_HOST
+        value: $(OTEL_COLLECTOR_NAME)
+    resources:
+      limits:
+        memory: 50Mi
+    securityContext:
+      runAsUser: 101  # envoy
+      runAsGroup: 101
+      runAsNonRoot: true
+
+  loadgenerator:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8089
+    env:
+      - name: LOCUST_WEB_PORT
+        value: "8089"
+      - name: LOCUST_USERS
+        value: "10"
+      - name: LOCUST_SPAWN_RATE
+        value: "1"
+      - name: LOCUST_HOST
+        value: 'http://{{ include "otel-demo.name" . }}-frontendproxy:8080'
+      - name: LOCUST_HEADLESS
+        value: "false"
+      - name: LOCUST_AUTOSTART
+        value: "true"
+      - name: LOCUST_BROWSER_TRAFFIC_ENABLED
+        value: "true"
+      - name: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
+        value: python
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+    resources:
+      limits:
+        memory: 1Gi
+
+  paymentService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: PAYMENT_SERVICE_PORT
+        value: "8080"
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+    resources:
+      limits:
+        memory: 120Mi
+    securityContext:
+      runAsUser: 1000  # node
+      runAsGroup: 1000
+      runAsNonRoot: true
+
+  productCatalogService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: PRODUCT_CATALOG_SERVICE_PORT
+        value: "8080"
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+    resources:
+      limits:
+        memory: 20Mi
+
+  quoteService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: QUOTE_SERVICE_PORT
+        value: "8080"
+      - name: OTEL_PHP_AUTOLOAD_ENABLED
+        value: "true"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+    resources:
+      limits:
+        memory: 40Mi
+    securityContext:
+      runAsUser: 33  # www-data
+      runAsGroup: 33
+      runAsNonRoot: true
+
+  recommendationService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: RECOMMENDATION_SERVICE_PORT
+        value: "8080"
+      - name: PRODUCT_CATALOG_SERVICE_ADDR
+        value: '{{ include "otel-demo.name" . }}-productcatalogservice:8080'
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: OTEL_PYTHON_LOG_CORRELATION
+        value: "true"
+      - name: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
+        value: python
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+    resources:
+      limits:
+        memory: 500Mi            # This is high to enable supporting the recommendationCache feature flag use case
+
+  shippingService:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: SHIPPING_SERVICE_PORT
+        value: "8080"
+      - name: QUOTE_SERVICE_ADDR
+        value: 'http://{{ include "otel-demo.name" . }}-quoteservice:8080'
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+    resources:
+      limits:
+        memory: 20Mi
+
+  flagd:
+    enabled: true
+    imageOverride:
+      repository: "ghcr.io/open-feature/flagd"
+      tag: "v0.10.1"
+    useDefault:
+      env: true
+    replicas: 1
+    service:
+      port: 8013
+    resources:
+      limits:
+        memory: 50Mi
+    command:
+      - "/flagd-build"
+      - "start"
+      - "--uri"
+      - "file:./etc/flagd/demo.flagd.json"
+    mountedConfigMaps:
+      - name: config
+        mountPath: /etc/flagd
+        existingConfigMap: '{{ include "otel-demo.name" . }}-flagd-config'
+
+  kafka:
+    enabled: true
+    useDefault:
+      env: true
+    replicas: 1
+    ports:
+      - name: plaintext
+        value: 9092
+      - name: controller
+        value: 9093
+    env:
+      - name: KAFKA_ADVERTISED_LISTENERS
+        value: 'PLAINTEXT://{{ include "otel-demo.name" . }}-kafka:9092'
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+      - name: KAFKA_HEAP_OPTS
+        value: "-Xmx200M -Xms200M"
+    resources:
+      limits:
+        memory: 500Mi
+    securityContext:
+      runAsUser: 1000  # appuser
+      runAsGroup: 1000
+      runAsNonRoot: true
+
+  redis:
+    enabled: true
+    useDefault:
+      env: true
+    imageOverride:
+      repository: "redis"
+      tag: "7.2-alpine"
+    replicas: 1
+    ports:
+      - name: redis
+        value: 6379
+    resources:
+      limits:
+        memory: 20Mi
+    securityContext:
+      runAsUser: 999  # redis
+      runAsGroup: 1000
+      runAsNonRoot: true
+
+jaeger:
+  enabled: false
+  provisionDataStore:
+    cassandra: false
+  allInOne:
+    enabled: true
+    args:
+      - "--memory.max-traces=5000"
+      - "--query.base-path=/jaeger/ui"
+      - "--prometheus.server-url=http://{{ include \"otel-demo.name\" . }}-prometheus-server:9090"
+      - "--prometheus.query.normalize-calls=true"
+      - "--prometheus.query.normalize-duration=true"
+    extraEnv:
+      - name: METRICS_STORAGE_TYPE
+        value: prometheus
+    resources:
+      limits:
+        memory: 400Mi
+  storage:
+    type: none
+  agent:
+    enabled: false
+  collector:
+    enabled: false
+  query:
+    enabled: false
+
+prometheus:
+  enabled: false
+  alertmanager:
+    enabled: false
+  configmapReload:
+    prometheus:
+      enabled: false
+  kube-state-metrics:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false
+  prometheus-pushgateway:
+    enabled: false
+
+  server:
+    extraFlags:
+      - "enable-feature=exemplar-storage"
+      - "enable-feature=otlp-write-receiver"
+    global:
+      scrape_interval: 5s
+      scrape_timeout: 3s
+      evaluation_interval: 30s
+    persistentVolume:
+      enabled: false
+    service:
+      servicePort: 9090
+    resources:
+      limits:
+        memory: 300Mi
+
+  serverFiles:
+    prometheus.yml:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          honor_labels: true
+          kubernetes_sd_configs:
+            - role: pod
+              namespaces:
+                own_namespace: true
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_opentelemetry_community_demo]
+              action: keep
+              regex: true
+
+grafana:
+  enabled: false
+  grafana.ini:
+    auth:
+      disable_login_form: true
+    auth.anonymous:
+      enabled: true
+      org_name: Main Org.
+      org_role: Admin
+    server:
+      root_url: "%(protocol)s://%(domain)s:%(http_port)s/grafana"
+      serve_from_sub_path: true
+  adminPassword: admin
+  plugins:
+    - grafana-opensearch-datasource
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          uid: webstore-metrics
+          type: prometheus
+          url: 'http://{{ include "otel-demo.name" . }}-prometheus-server:9090'
+          editable: true
+          isDefault: true
+          jsonData:
+            exemplarTraceIdDestinations:
+              - datasourceUid: webstore-traces
+                name: trace_id
+
+              - url: http://localhost:8080/jaeger/ui/trace/$${__value.raw}
+                name: trace_id
+                urlDisplayLabel: View in Jaeger UI
+
+        - name: Jaeger
+          uid: webstore-traces
+          type: jaeger
+          url: 'http://{{ include "otel-demo.name" . }}-jaeger-query:16686/jaeger/ui'
+          editable: true
+          isDefault: false
+
+        - name: OpenSearch
+          type: grafana-opensearch-datasource
+          url: 'http://otel-demo-opensearch:9200/'
+          access: proxy
+          editable: true
+          isDefault: false
+          jsonData:
+            database: otel
+            flavor: opensearch
+            logLevelField: severity
+            logMessageField: body
+            pplEnabled: true
+            timeField: observedTimestamp
+            version: 2.13.0
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+  dashboardsConfigMaps:
+    default: '{{ include "otel-demo.name" . }}-grafana-dashboards'
+  resources:
+    limits:
+      memory: 150Mi
+
+opensearch:
+  enabled: false
+  fullnameOverride: otel-demo-opensearch
+  clusterName: demo-cluster
+  nodeGroup: otel-demo
+  singleNode: true
+  opensearchJavaOpts: "-Xms300m -Xmx300m"
+  persistence:
+    enabled: false
+  extraEnvs:
+    - name: "bootstrap.memory_lock"
+      value: "true"
+    - name: "DISABLE_INSTALL_DEMO_CONFIG"
+      value: "true"
+    - name: "DISABLE_SECURITY_PLUGIN"
+      value: "true"
+  resources:
+    limits:
+      memory: 1Gi
