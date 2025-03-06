@@ -85,10 +85,10 @@ opentelemetry-collector:
       enabled: true
     hostMetrics:
       enabled: true
-    # kubeletMetrics:
-    #   enabled: true
+    kubeletMetrics:
+      enabled: false
     kubernetesEvents:
-      enabled: true
+      enabled: false
   resources:
     limits:
       memory: 200Mi
@@ -96,11 +96,11 @@ opentelemetry-collector:
     type: ClusterIP
   ports:
     metrics:
-      enabled: true
+      enabled: false
   podAnnotations:
     prometheus.io/scrape: "true"
     opentelemetry_community_demo: "true"
-  config:
+  config: # had to use this due to 
     receivers:
       otlp:
         protocols:
@@ -124,7 +124,7 @@ opentelemetry-collector:
         verbosity: detailed
 
       otlphttp/newrelic:
-          endpoint: "https://otlp.nr-data.net"
+          endpoint: "https://otlp.nr-data.net:4318"
           headers:
             api-key: ${env:NR_LICENSE_KEY}
       ## Create an exporter to Jaeger using the standard `otlp` export format
@@ -147,15 +147,21 @@ opentelemetry-collector:
     processors:
       # New Relic customizations #
       # Source: https://github.com/newrelic/newrelic-opentelemetry-examples/blob/main/other-examples/collector/nr-config/otel-config.yaml
-      batch:
+      batch: {}
       # Will convert all monotonic, cumulative sums to monotonic, delta sums
-      cumulativetodelta:
+      cumulativetodelta: {}
+      # memory_limiter:
+      #   check_interval: 5s
+      #   limit_percentage: 80
+      #   spike_limit_percentage: 15
+
       transform:
         trace_statements:
           - context: span
             statements:
             - truncate_all(attributes, 4095)
             - truncate_all(resource.attributes, 4095)
+          ## Migrated from OTel Demo chart
           - context: span
             statements:
               # could be removed when https://github.com/vercel/next.js/pull/64852 is fixed upstream
@@ -168,7 +174,6 @@ opentelemetry-collector:
             - truncate_all(resource.attributes, 4095)
         error_mode: ignore
           
-
       k8sattributes:
         auth_type: "serviceAccount"
         passthrough: false
@@ -192,22 +197,10 @@ opentelemetry-collector:
 
       # End of New Relic customizations #
 
-      # This processor is used to help limit high cardinality on next.js span names
-      # When this PR is merged (and released) we can remove this transform processor
-      # https://github.com/vercel/next.js/pull/64852
-      # transform:
-      #   error_mode: ignore
-      #   trace_statements:
-      #     - context: span
-      #       statements:
-      #         # could be removed when https://github.com/vercel/next.js/pull/64852 is fixed upstream
-      #         - replace_pattern(name, "\\?.*", "")
-      #         - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
-
       resource:
         attributes:
         - key: service.instance.id
-          from_attribute: k8s.pod.uid
+          from_attribute: k8s.pod.name
           action: insert
 
     # connectors:
@@ -220,7 +213,7 @@ opentelemetry-collector:
           processors: [memory_limiter, resource, transform, batch]
           exporters: [otlphttp/newrelic, debug]
         metrics:
-          receivers: [prometheus, redis, otlp]
+          receivers: [redis, otlp]
           processors: [memory_limiter, resource, k8sattributes, cumulativetodelta, batch]
           exporters: [otlphttp/newrelic, debug]
         logs:
@@ -232,12 +225,12 @@ opentelemetry-collector:
           level: basic
           readers:
             - periodic:
-                interval: 10000
+                interval: 30000
                 timeout: 5000
                 exporter:
                   otlp:
-                    protocol: grpc
-                    endpoint: otel-collector:4318
+                    protocol: http/protobuf
+                    endpoint: http://otel-collector:4318
 
 components:
   ## Demo Components are named objects (services) with several properties
