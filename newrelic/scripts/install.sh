@@ -13,7 +13,7 @@ if ! command -v kubectl &> /dev/null; then
 fi
 
 # Prompt the user for input
-echo -n "Please enter your New Relic License Key:"
+echo -n "Please enter your New Relic License Key: "
 read user_input
 
 # Check if input is empty

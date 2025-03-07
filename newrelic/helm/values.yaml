@@ -11,6 +11,11 @@ default:
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
+    - name: OTEL_K8S_CONTAINER_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: "metadata.labels['app.kubernetes.io/component']"
     - name: OTEL_NAMESPACE_NAME
       valueFrom:
         fieldRef:
@@ -22,13 +27,7 @@ default:
     - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       value: delta
     - name: OTEL_RESOURCE_ATTRIBUTES
-      value: |
-          service.name=$(OTEL_SERVICE_NAME),
-          service.namespace=opentelemetry-demo,
-          service.version={{ .Chart.AppVersion }},
-          k8s.pod.name=$(OTEL_POD_NAME),
-          k8s.namespace.name=$(OTEL_NAMESPACE_NAME),
-          k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+      value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version={{ .Chart.AppVersion }},service.instance.id=$(OTEL_POD_NAME),k8s.container.name=$(OTEL_K8S_CONTAINER_NAME),k8s.pod.name=$(OTEL_POD_NAME),k8s.namespace.name=$(OTEL_NAMESPACE_NAME),k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           
   # Allows overriding and additions to .Values.default.env
   envOverrides: []
@@ -116,7 +115,7 @@ opentelemetry-collector:
           - endpoint: http://frontend-proxy:8080
       redis:
         endpoint: "valkey-cart:6379"
-        collection_interval: 10s
+        collection_interval: 30s
 
     exporters:
       debug: {}
@@ -127,6 +126,8 @@ opentelemetry-collector:
           endpoint: "https://otlp.nr-data.net:4318"
           headers:
             api-key: ${env:NR_LICENSE_KEY}
+
+
       ## Create an exporter to Jaeger using the standard `otlp` export format
       # otlp:
       #   endpoint: jaeger-collector:4317
@@ -173,35 +174,46 @@ opentelemetry-collector:
             - truncate_all(attributes, 4095)
             - truncate_all(resource.attributes, 4095)
         error_mode: ignore
+
+      resourcedetection/env:  
+        detectors: ["env", "system"]
+        override: false
+        system:
+          hostname_sources: ["os"]
+          resource_attributes:
+            host.id:
+              enabled: true
           
-      k8sattributes:
-        auth_type: "serviceAccount"
-        passthrough: false
-        filter:
-          node_from_env_var: KUBE_NODE_NAME
-        extract:
-          metadata:
-            - k8s.pod.name
-            - k8s.pod.uid
-            - k8s.deployment.name
-            - k8s.daemonset.name
-            - k8s.namespace.name
-            - k8s.node.name
-            - k8s.pod.start_time
-        pod_association:
-          - sources: 
-            - from: resource_attribute
-              name: k8s.pod.uid
-            - from: resource_attribute
-              name: k8s.pod.name
+      # k8sattributes:
+      #   auth_type: "serviceAccount"
+      #   passthrough: false
+      #   filter:
+      #     node_from_env_var: KUBE_NODE_NAME
+      #   extract:
+      #     metadata:
+      #       - k8s.pod.name
+      #       - k8s.pod.uid
+      #       - k8s.deployment.name
+      #       - k8s.daemonset.name
+      #       - k8s.namespace.name
+      #       - k8s.node.name
+      #       - k8s.pod.start_time
+      #   pod_association:
+      #     - sources: 
+      #       - from: resource_attribute
+      #         name: k8s.pod.uid
+      #       - from: resource_attribute
+      #         name: k8s.pod.name
 
       # End of New Relic customizations #
 
-      resource:
-        attributes:
-        - key: service.instance.id
-          from_attribute: k8s.pod.name
-          action: insert
+      
+
+      # resource:
+      #   attributes:
+      #   - key: service.instance.id
+      #     from_attribute: k8s.pod.name
+      #     action: upsert
 
     # connectors:
     #   spanmetrics: {}
@@ -210,11 +222,11 @@ opentelemetry-collector:
       pipelines:
         traces:
           receivers: [otlp]
-          processors: [memory_limiter, resource, transform, batch]
+          processors: [memory_limiter, resource, resourcedetection/env, transform, batch]
           exporters: [otlphttp/newrelic, debug]
         metrics:
-          receivers: [redis, otlp]
-          processors: [memory_limiter, resource, k8sattributes, cumulativetodelta, batch]
+          receivers: [hostmetrics, redis, otlp]
+          processors: [memory_limiter, resource, resourcedetection/env, k8sattributes, cumulativetodelta, batch]
           exporters: [otlphttp/newrelic, debug]
         logs:
           receivers: [otlp]
@@ -635,7 +647,7 @@ components:
       - name: LOCUST_AUTOSTART
         value: "true"
       - name: LOCUST_BROWSER_TRAFFIC_ENABLED
-        value: "true"
+        value: "false"
       - name: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
         value: python
       - name: FLAGD_HOST
@@ -776,7 +788,7 @@ components:
         value: $(OTEL_COLLECTOR_NAME):4317
     resources:
       limits:
-        memory: 75Mi
+        memory: 100Mi
     command:
       - "/flagd-build"
       - "start"
@@ -801,7 +813,7 @@ components:
             value: http://$(OTEL_COLLECTOR_NAME):4318
         resources:
           limits:
-            memory: 75Mi
+            memory: 150Mi
         volumeMounts:
           - name: config-rw
             mountPath: /app/data
@@ -835,12 +847,12 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4318
       - name: KAFKA_HEAP_OPTS
-        value: "-Xmx400M -Xms400M"
+        value: "-Xmx600M -Xms600M"
     resources:
       requests:
         memory: 600Mi
       limits:
-        memory: 800Mi
+        memory: 1Gi
     securityContext:
       runAsUser: 1000  # appuser
       runAsGroup: 1000
