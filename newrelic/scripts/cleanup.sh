@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 release_name=otel-demo
 namespace=opentelemetry-demo
 
