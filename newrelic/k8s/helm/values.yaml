@@ -371,6 +371,7 @@ opentelemetry-collector:
           - batch
           receivers:
           - hostmetrics
+          - prometheus
           - redis
           - otlp
         traces:
