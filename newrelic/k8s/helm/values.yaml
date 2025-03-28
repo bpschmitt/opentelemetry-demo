@@ -351,39 +351,20 @@ opentelemetry-collector:
               - action: labeldrop
                 regex: service_name
           
-          # - job_name: kubernetes-cadvisor
-          #   scrape_interval: 30s
-          #   kubernetes_sd_configs:
-          #     - role: node
-          #   scheme: https
-          #   metrics_path: /metrics/cadvisor
-          #   tls_config:
-          #     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          #     insecure_skip_verify: true
-          #   authorization:
-          #     credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-          #   relabel_configs:
-          #     - action: labelmap
-          #       regex: __meta_kubernetes_node_label_(.+)
-          - job_name: cadvisor
+          - job_name: kubernetes-cadvisor
             scrape_interval: 30s
-            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
             kubernetes_sd_configs:
               - role: node
+            scheme: https
+            metrics_path: /metrics/cadvisor
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              insecure_skip_verify: true
+            authorization:
+              credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
             relabel_configs:
-              - replacement: kubernetes.default.svc.cluster.local:443
-                target_label: __address__
-              - regex: (.+)
-                replacement: /api/v1/nodes/$${1}/proxy/metrics/cadvisor
-                source_labels:
-                  - __meta_kubernetes_node_name
-                target_label: __metrics_path__
-              - action: replace
-                target_label: job_label
-                replacement: cadvisor
-              - source_labels: [__meta_kubernetes_node_name]
-                regex: ${KUBE_NODE_NAME}
-                action: keep
+              - action: labelmap
+                regex: __meta_kubernetes_node_label_(.+)
             # Filter only a small number of metrics for lab purposes
             metric_relabel_configs:
               - source_labels: [__name__]
