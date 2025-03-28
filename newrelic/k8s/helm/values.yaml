@@ -119,7 +119,6 @@ opentelemetry-collector:
         - nodes
         - nodes/proxy
         - nodes/stat
-        - nodes/spec
         - nodes/metrics
         - endpoints
         verbs:
