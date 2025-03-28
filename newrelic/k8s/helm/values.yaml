@@ -120,6 +120,7 @@ opentelemetry-collector:
         - nodes/proxy
         - nodes/stat
         - nodes/spec
+        - nodes/metrics
         - endpoints
         verbs:
         - get
@@ -215,6 +216,59 @@ opentelemetry-collector:
           statements:
           - replace_pattern(name, "\\?.*", "")
           - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+
+      ###########################################################################################################################
+      ## Lab 3 - Data Obfuscation ##
+      ## Overview: This transform rule converts the userSocialId field to a partially obfuscated value using the replace_pattern statement
+      ###########################################################################################################################
+      transform/obfuscate:
+        log_statements:
+        - context: log
+          statements:
+            - replace_pattern(attributes["userSocialId"], "^[0-9]{3}.[0-9]{3}.[0-9]{1}", "***.***.*")
+      ###########################################################################################################################
+
+      ###########################################################################################################################
+      ## Lab 4 - Tail Sampling ##
+      ## Overview: In this lab, you'll enable the workshop-test tail sampling policy which will only sample traces with more than
+      ##           5 spans and traces slower than 200ms.  Additional tail sampling policy examples can be found at the link below.
+      ## https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/tailsamplingprocessor/testdata/tail_sampling_config.yaml
+      ##
+      ###########################################################################################################################
+      tail_sampling:
+        policies:
+          [
+            {
+              name: default-collect-everything,
+              type: always_sample
+            },
+            # {
+            #   name: workshop-test,
+            #   type: and,
+            #   and: {
+            #     and_sub_policy: 
+            #     [
+            #       {
+            #         name: min-spans,
+            #         type: span_count,
+            #         span_count: {min_spans: 5}
+            #       },
+            #       {
+            #         name: slow-traces,
+            #         type: latency,
+            #         latency: {threshold_ms: 200}
+            #       },
+            #     ]
+            #   }
+            # },
+            # {
+            #   # apply probabilistic sampling
+            #   name: only-50-percent,
+            #   type: probabilistic,
+            #   probabilistic: { sampling_percentage: 50 },
+            # },
+          ]
+      ###########################################################################################################################
 
     receivers:
       hostmetrics:
@@ -388,6 +442,7 @@ opentelemetry-collector:
           - memory_limiter
           - resource
           - transform
+          - transform/obfuscate
           - batch
           receivers:
           - otlp
