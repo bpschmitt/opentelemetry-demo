@@ -264,7 +264,7 @@ opentelemetry-collector:
                 regex: service_name
           
           - job_name: coredns
-            scrape_interval: 20s
+            scrape_interval: 30s
             kubernetes_sd_configs:
               - role: endpoints
             relabel_configs:
@@ -319,7 +319,7 @@ opentelemetry-collector:
                 regex: service_name
           
           - job_name: kubernetes-cadvisor
-            scrape_interval: 20s
+            scrape_interval: 30s
             kubernetes_sd_configs:
               - role: node
             scheme: https
