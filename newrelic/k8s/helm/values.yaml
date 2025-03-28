@@ -108,6 +108,36 @@ opentelemetry-collector:
   podAnnotations:
     prometheus.io/scrape: "true"
     opentelemetry_community_demo: "true"
+  clusterRole:
+    rules:
+      - apiGroups:
+        - ""
+        resources:
+        - pods
+        - namespaces
+        - services
+        - nodes
+        - endpoints
+        verbs:
+        - get
+        - watch
+        - list
+      - apiGroups:
+        - apps
+        resources:
+        - replicasets
+        verbs:
+        - get
+        - list
+        - watch
+      - apiGroups:
+        - extensions
+        resources:
+        - replicasets
+        verbs:
+        - get
+        - list
+        - watch
   alternateConfig:
     exporters:
       debug: {}
