@@ -117,6 +117,9 @@ opentelemetry-collector:
         - namespaces
         - services
         - nodes
+        - nodes/proxy
+        - nodes/stat
+        - nodes/spec
         - endpoints
         verbs:
         - get
