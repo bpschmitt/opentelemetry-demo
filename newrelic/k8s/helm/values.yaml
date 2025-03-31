@@ -218,13 +218,13 @@ opentelemetry-collector:
 
       ###########################################################################################################################
       ## Lab 3 - Data Obfuscation ##
-      ## Overview: This transform rule converts the userSocialId field to a partially obfuscated value using the replace_pattern statement
+      ## Overview: This transform rule converts the userSSN field to a partially obfuscated value using the replace_pattern statement
       ###########################################################################################################################
       transform/obfuscate:
         log_statements:
         - context: log
           statements:
-            - replace_pattern(attributes["userSocialId"], "^[0-9]{3}.[0-9]{2}", "***-**")
+            - replace_pattern(attributes["userSSN"], "^[0-9]{3}.[0-9]{2}", "***-**")
       ###########################################################################################################################
 
       ###########################################################################################################################
