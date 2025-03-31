@@ -245,9 +245,6 @@ opentelemetry-collector:
       ##
       ###########################################################################################################################
       tail_sampling:
-        #
-        recordpolicy:
-        metricstatcountspanssampled:
         policies:
           [
             {
@@ -488,18 +485,18 @@ opentelemetry-collector:
           - batch
           receivers:
           - otlp
-      telemetry:
-        metrics:
-          address: ${env:MY_POD_IP}:8888
-          level: basic
-          readers:
-          - periodic:
-              exporter:
-                otlp:
-                  endpoint: http://${env:MY_POD_IP}:4318
-                  protocol: http/protobuf
-              interval: 30000
-              timeout: 5000
+      # telemetry:
+      #   metrics:
+      #     address: ${env:MY_POD_IP}:8888
+      #     level: basic
+      #     readers:
+      #     - periodic:
+      #         exporter:
+      #           otlp:
+      #             endpoint: http://${env:MY_POD_IP}:4318
+      #             protocol: http/protobuf
+      #         interval: 30000
+      #         timeout: 5000
 
 components:
   ## Demo Components are named objects (services) with several properties
