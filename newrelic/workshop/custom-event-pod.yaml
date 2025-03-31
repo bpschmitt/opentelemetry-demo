@@ -28,13 +28,59 @@ data:
   customevent.sh: |
     #!/bin/sh
 
+    # Script to generate random fake Social Security Numbers
+    # These are for testing purposes only and are not real SSNs
+
+    # Function to generate a random number between min and max (inclusive)
+    random_number() {
+      local min=$1
+      local max=$2
+      echo $(( RANDOM % (max - min + 1) + min ))
+    }
+
+    # Function to generate a random SSN
+    generate_fake_ssn() {
+      # First part (area number): 001-899, excluding 666 and certain other restricted numbers
+      while true; do
+        area=$(random_number 1 899)
+        # Format with leading zeros
+        area=$(printf "%03d" $area)
+        
+        # Skip restricted area numbers
+        if [ "$area" != "666" ] && [ "$area" != "000" ] && [ "$area" != "900" ]; then
+          break
+        fi
+      done
+      
+      # Second part (group number): 01-99
+      group=$(random_number 1 99)
+      group=$(printf "%02d" $group)
+      
+      # Third part (serial number): 0001-9999
+      serial=$(random_number 1 9999)
+      serial=$(printf "%04d" $serial)
+      
+      # Output the fake SSN in the standard format
+      echo "$area-$group-$serial"
+    }
+
+    # Check if an argument was provided for the number of SSNs to generate
+    if [ $# -eq 0 ]; then
+      count=1
+    else
+      count=$1
+    fi
+
+    SSN=$(generate_fake_ssn)
+
     echo "Sending custom event to $OTLP_COLLECTOR_ENDPOINT..."
 
     curl -s --request POST \
       --url $OTLP_COLLECTOR_ENDPOINT \
       --header 'Content-Type: application/json' \
       --header 'User-Agent: newrelic-instruqt-lab' \
-      --data '{
+      --data @- << EOF
+    {
       "resourceLogs": [
         {
           "resource": {
@@ -64,9 +110,9 @@ data:
                   },
                   "attributes": [
                     {
-                      "key": "userSocialId",
+                      "key": "userSSN",
                       "value": {
-                        "stringValue": "123.456.789-10"
+                        "stringValue": "$SSN"
                       }
                     },
                     {
@@ -82,4 +128,5 @@ data:
           ]
         }
       ]
-    }'
+    }
+    EOF
