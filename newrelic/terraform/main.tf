@@ -133,7 +133,7 @@ resource "newrelic_service_level" "checkout-service-level" {
 # Create a service level for Product Catalog 
 resource "newrelic_service_level" "productcatalog-service-level" {
     guid = data.newrelic_entity.productcatalog-entity.id
-    name = "Product-Catalog Service Level"
+    name = "Product Catalog Service Level"
     description = "Proportion of successful requests."
 
     events {
@@ -254,13 +254,13 @@ resource "newrelic_nrql_alert_condition" "apm-service-levels" {
 
 # Add OTel Collector Flow dashboard
 resource "newrelic_one_dashboard_json" "otel_collector_flow_dashboard" {
-     json = file("../workshop/dashboards/otel_collector_flow.json")
+     json = file("../workshop/dashboards/otel_collector_data_flow.json")
 }
 
 resource "newrelic_one_dashboard_json" "replacer_dashboard" {
    json = replace(
   	replace(    # This changes the dashboard name
-    	    file("../workshop/dashboards/otel_collector_flow.json"),
+    	    file("../workshop/dashboards/otel_collector_data_flow.json"),
     	    "by Terraform"
     	    ,"renamed by Terraform"
   	),
