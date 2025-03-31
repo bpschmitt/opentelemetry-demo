@@ -252,10 +252,10 @@ resource "newrelic_nrql_alert_condition" "apm-service-levels" {
   }
 }
 
-# Add OTel Collector Flow dashboard
-resource "newrelic_one_dashboard_json" "otel_collector_flow_dashboard" {
-     json = file("../workshop/dashboards/otel_collector_data_flow.json")
-}
+# # Add OTel Collector Flow dashboard
+# resource "newrelic_one_dashboard_json" "otel_collector_flow_dashboard" {
+#      json = file("../workshop/dashboards/otel_collector_data_flow.json")
+# }
 
 resource "newrelic_one_dashboard_json" "replacer_dashboard" {
    json = replace(
