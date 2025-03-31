@@ -72,34 +72,35 @@ data "newrelic_entity" "payment-entity" {
   }
 }
 
-# Create a service level for Ad
-resource "newrelic_service_level" "adservice-service-level" {
-    guid = data.newrelic_entity.adservice-entity.id
-    name = "Ad Service Level"
-    description = "Proportion of successful requests."
+# # Create a service level for Ad
+# resource "newrelic_service_level" "adservice-service-level" {
+#     guid = data.newrelic_entity.adservice-entity.id
+#     name = "Ad Service Level"
+#     description = "Proportion of successful requests."
 
-    events {
-        account_id = var.account_id
-        valid_events {
-            from = "Span"
-            where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
-        }
-        bad_events {
-            from = "Span"
-            where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
-        }
-    }
+#     events {
+#         account_id = var.account_id
+#         valid_events {
+#             from = "Span"
+#             where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
+#         }
+#         bad_events {
+#             from = "Span"
+#             where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
+#         }
+#     }
 
-    objective {
-        target = 99.25
-        time_window {
-            rolling {
-                count = 1
-                unit = "DAY"
-            }
-        }
-    }
-}
+#     objective {
+#         target = 99.25
+#         time_window {
+#             rolling {
+#                 count = 1
+#                 unit = "DAY"
+#             }
+#         }
+#     }
+# }
+
 
 # Create a service level for Checkout 
 resource "newrelic_service_level" "checkout-service-level" {
@@ -241,7 +242,7 @@ resource "newrelic_nrql_alert_condition" "apm-service-levels" {
   enabled                        = true
 
   nrql {
-    query = "FROM Metric SELECT sum(newrelic.sli.good) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.adservice-service-level.sli_guid}','${newrelic_service_level.cartservice-service-level.sli_guid}') FACET sli.guid"
+    query = "FROM Metric SELECT sum(newrelic.sli.good) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.cartservice-service-level.sli_guid}') FACET sli.guid"
   }
 
   critical {
