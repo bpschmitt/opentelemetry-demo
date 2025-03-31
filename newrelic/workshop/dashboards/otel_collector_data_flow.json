@@ -1,7 +1,6 @@
 {
   "name": "OpenTelemetry Collector Data Flow",
   "description": null,
-  "permissions": "PUBLIC_READ_WRITE",
   "pages": [
     {
       "name": "OpenTelemetry Collector Stats",
@@ -12,28 +11,128 @@
           "layout": {
             "column": 1,
             "row": 1,
-            "width": 7,
-            "height": 2
+            "width": 1,
+            "height": 5
           },
           "linkedEntityGuids": null,
           "visualization": {
             "id": "viz.markdown"
           },
           "rawConfiguration": {
-            "text": "# Opentelemetry Collector Data Flow"
+            "text": "![otel](https://images.seeklogo.com/logo-png/43/3/opentelemetry-logo-png_seeklogo-430977.png?v=1957910254483689080)"
           }
         },
         {
-          "title": "Collector Instances",
+          "title": "",
           "layout": {
-            "column": 8,
+            "column": 2,
             "row": 1,
-            "width": 1,
+            "width": 5,
+            "height": 5
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.markdown"
+          },
+          "rawConfiguration": {
+            "text": "# OpenTelemetry Collector Data Flow\n---\n### Overview\n The OpenTelemetry Collector Data Flow quickstart contains a dashboard that helps visualize the flow of data through the collector, monitor the collector's performance, and identify telemetry bottlenecks.  The dashboard includes performance metrics related to the telemetry pipeline, such as the number of metrics, logs, and traces processed, refused, and dropped.  Also included are CPU and Memory consumption, and stats related to the batch processor.\n\n---\n### Requirements\n\n- OpenTelemetry Collector [internal telemetry](https://opentelemetry.io/docs/collector/internal-telemetry/#use-internal-telemetry-to-monitor-the-collector) collection must be enabled\n- `k8s.pod.name` attribute (used for faceting) must be present on the `otelcol_*` metrics.\n---\n## Additional Resources\n\n- [OTel Collector Internal Telemetry](https://opentelemetry.io/docs/collector/internal-telemetry/#use-internal-telemetry-to-monitor-the-collector)\n- [OTel Collector Internal Telemetry - Basic Metrics](https://opentelemetry.io/docs/collector/internal-telemetry/#basic-level-metrics)"
+          }
+        },
+        {
+          "title": "CPU Usage",
+          "layout": {
+            "column": 7,
+            "row": 1,
+            "width": 3,
             "height": 2
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "SELECT rate(sum(otelcol_process_cpu_seconds), 1 SECONDS) AS `CPU Util%` FROM Metric where k8s.pod.name in ({{pod_var}}) FACET k8s.pod.name LIMIT 100 TIMESERIES "
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "units": {
+              "unit": "PERCENTAGE"
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Total RSS Memory",
+          "layout": {
+            "column": 10,
+            "row": 1,
+            "width": 3,
+            "height": 2
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "from Metric select average(otelcol_process_memory_rss) as 'Memory MB Used' where k8s.pod.name in ({{pod_var}}) TIMESERIES facet k8s.pod.name"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "units": {
+              "unit": "BYTES"
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Batch Send Size Distribution",
+          "layout": {
+            "column": 7,
+            "row": 3,
+            "width": 2,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.heatmap"
           },
           "rawConfiguration": {
             "facet": {
@@ -41,10 +140,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "FROM Metric select uniqueCount(service_instance_id) as 'Instances' where metricName = 'otelcol_process_cpu_seconds' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select histogram(otelcol_processor_batch_batch_send_size, width: 1500, buckets: 10, start: 0) where k8s.pod.name in ({{pod_var}}) facet k8s.pod.name, processor limit 10"
               }
             ],
             "platformOptions": {
@@ -53,60 +150,80 @@
           }
         },
         {
-          "title": "Avg. CPU Utilization %",
+          "title": "Batch Send Size",
           "layout": {
             "column": 9,
-            "row": 1,
+            "row": 3,
             "width": 2,
-            "height": 2
+            "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
               "showOtherSeries": false
             },
+            "legend": {
+              "enabled": true
+            },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "SELECT average((`__result_0`) * 100) as 'CPU Utilization %' FROM (SELECT rate(sum(otelcol_process_cpu_seconds), 1 SECONDS) AS `__result_0` FROM Metric where job in ({{otel_col_group}}) FACET service_instance_id LIMIT 100) LIMIT 100"
+                "accountIds": [],
+                "query": "FROM Metric select max(otelcol_processor_batch_batch_send_size) where k8s.pod.name in ({{pod_var}}) TIMESERIES facet k8s.pod.name, processor"
               }
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
             }
           }
         },
         {
-          "title": "Avg. Memory Utilization",
+          "title": "Batches sent due to size trigger",
           "layout": {
             "column": 11,
-            "row": 1,
+            "row": 3,
             "width": 2,
-            "height": 2
+            "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
               "showOtherSeries": false
             },
+            "legend": {
+              "enabled": true
+            },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select average(otelcol_process_memory_rss) as 'Memory Utilization' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "FROM Metric select sum(otelcol_processor_batch_batch_size_trigger_send) where k8s.pod.name in ({{pod_var}}) TIMESERIES facet k8s.pod.name, processor"
               }
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
             }
           }
         },
@@ -114,7 +231,7 @@
           "title": "",
           "layout": {
             "column": 1,
-            "row": 3,
+            "row": 6,
             "width": 12,
             "height": 1
           },
@@ -130,7 +247,7 @@
           "title": "Export Ratio %",
           "layout": {
             "column": 1,
-            "row": 4,
+            "row": 7,
             "width": 2,
             "height": 6
           },
@@ -142,10 +259,8 @@
             "limit": 100,
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select (sum(otelcol_exporter_sent_spans) / sum(otelcol_receiver_accepted_spans)) * 100 as 'Export Ratio %' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select (sum(otelcol_exporter_sent_spans) / sum(otelcol_receiver_accepted_spans)) * 100 as 'Export Ratio %' where k8s.pod.name in ({{pod_var}})"
               }
             ],
             "platformOptions": {
@@ -154,16 +269,16 @@
           }
         },
         {
-          "title": "Accepted Spans / minute",
+          "title": "Accepted Spans",
           "layout": {
             "column": 3,
-            "row": 4,
+            "row": 7,
             "width": 3,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.area"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
@@ -174,14 +289,21 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_spans), 1 minute) TIMESERIES facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_receiver_accepted_spans) TIMESERIES facet tuple(receiver, transport, k8s.pod.name) where k8s.pod.name in ({{pod_var}})"
               }
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
             }
           }
         },
@@ -189,13 +311,13 @@
           "title": "Accepted Span Rate / minute",
           "layout": {
             "column": 6,
-            "row": 4,
-            "width": 1,
+            "row": 7,
+            "width": 2,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.bar"
           },
           "rawConfiguration": {
             "facet": {
@@ -203,10 +325,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_receiver_accepted_spans), 1 minute) as 'Spans/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) facet transport"
               }
             ],
             "platformOptions": {
@@ -215,61 +335,16 @@
           }
         },
         {
-          "title": "",
-          "layout": {
-            "column": 7,
-            "row": 4,
-            "width": 1,
-            "height": 6
-          },
-          "linkedEntityGuids": null,
-          "visualization": {
-            "id": "viz.markdown"
-          },
-          "rawConfiguration": {
-            "text": " "
-          }
-        },
-        {
-          "title": "Sent Span Rate / minute",
+          "title": "Sent Spans",
           "layout": {
             "column": 8,
-            "row": 4,
-            "width": 1,
+            "row": 7,
+            "width": 3,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
-          },
-          "rawConfiguration": {
-            "facet": {
-              "showOtherSeries": false
-            },
-            "nrqlQueries": [
-              {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
-              }
-            ],
-            "platformOptions": {
-              "ignoreTimeRange": false
-            }
-          }
-        },
-        {
-          "title": "Sent Span Rate / minute",
-          "layout": {
-            "column": 9,
-            "row": 4,
-            "width": 4,
-            "height": 3
-          },
-          "linkedEntityGuids": null,
-          "visualization": {
-            "id": "viz.area"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
@@ -280,10 +355,44 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_spans), 1 minute) TIMESERIES facet exporter where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_exporter_sent_spans) TIMESERIES facet exporter, k8s.pod.name where k8s.pod.name in ({{pod_var}})"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Failed Span Rate / minute",
+          "layout": {
+            "column": 11,
+            "row": 7,
+            "width": 2,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.bar"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) facet exporter"
               }
             ],
             "platformOptions": {
@@ -292,31 +401,41 @@
           }
         },
         {
-          "title": "Refused Span Rate / minute",
+          "title": "Refused Spans",
           "layout": {
             "column": 3,
-            "row": 7,
+            "row": 10,
             "width": 3,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.table"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
               "showOtherSeries": false
             },
+            "legend": {
+              "enabled": true
+            },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_spans), 1 minute) as 'Spans/minute' facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_receiver_refused_spans) facet tuple(receiver, transport, k8s.pod.name) where k8s.pod.name in ({{pod_var}}) TIMESERIES "
               }
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
             }
           }
         },
@@ -324,13 +443,13 @@
           "title": "Refused Span Rate / minute",
           "layout": {
             "column": 6,
-            "row": 7,
-            "width": 1,
+            "row": 10,
+            "width": 2,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.bar"
           },
           "rawConfiguration": {
             "facet": {
@@ -338,10 +457,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_receiver_refused_spans), 1 minute) as 'Spans/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) facet transport"
               }
             ],
             "platformOptions": {
@@ -350,45 +467,55 @@
           }
         },
         {
-          "title": "Failed Span Rate / minute",
+          "title": "Failed Spans",
           "layout": {
             "column": 8,
-            "row": 7,
-            "width": 1,
+            "row": 10,
+            "width": 3,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
               "showOtherSeries": false
             },
+            "legend": {
+              "enabled": true
+            },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_exporter_send_failed_spans) facet exporter, k8s.pod.name where k8s.pod.name in ({{pod_var}}) TIMESERIES "
               }
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
             }
           }
         },
         {
           "title": "Failed Span Rate / minute",
           "layout": {
-            "column": 9,
-            "row": 7,
-            "width": 4,
+            "column": 11,
+            "row": 10,
+            "width": 2,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.table"
+            "id": "viz.bar"
           },
           "rawConfiguration": {
             "facet": {
@@ -396,10 +523,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' facet exporter where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) facet exporter"
               }
             ],
             "platformOptions": {
@@ -411,7 +536,7 @@
           "title": "",
           "layout": {
             "column": 1,
-            "row": 10,
+            "row": 13,
             "width": 12,
             "height": 1
           },
@@ -427,7 +552,7 @@
           "title": "Export Ratio %",
           "layout": {
             "column": 1,
-            "row": 11,
+            "row": 14,
             "width": 2,
             "height": 6
           },
@@ -439,10 +564,8 @@
             "limit": 100,
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select (sum(otelcol_exporter_sent_metric_points) / sum(otelcol_receiver_accepted_metric_points)) * 100 as 'Export Ratio %' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select (sum(otelcol_exporter_sent_metric_points) / sum(otelcol_receiver_accepted_metric_points)) * 100 as 'Export Ratio %' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
               }
             ],
             "platformOptions": {
@@ -451,10 +574,208 @@
           }
         },
         {
-          "title": "Accepted Metric Point Rate / minute",
+          "title": "Accepted Metric Points",
           "layout": {
             "column": 3,
-            "row": 11,
+            "row": 14,
+            "width": 3,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "SELECT sum(otelcol_receiver_accepted_metric_points) FROM Metric SINCE 60 MINUTES AGO UNTIL NOW FACET tuple(receiver, transport, k8s.pod.name) LIMIT 100 TIMESERIES 60000 SLIDE BY 30000 where k8s.pod.name in ({{pod_var}})"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Accepted Metric Point Rate / minute",
+          "layout": {
+            "column": 6,
+            "row": 14,
+            "width": 2,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.bar"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "SELECT rate(sum(otelcol_receiver_accepted_metric_points), 1 SECONDS) FROM Metric SINCE 60 MINUTES AGO UNTIL NOW LIMIT 100 FACET tuple(receiver) where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
+          "title": "Sent Metric Points",
+          "layout": {
+            "column": 8,
+            "row": 14,
+            "width": 3,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "SELECT sum(otelcol_exporter_sent_metric_points) FROM Metric SINCE 60 MINUTES AGO UNTIL NOW FACET exporter, k8s.pod.name LIMIT 100 TIMESERIES 60000 SLIDE BY 30000 where k8s.pod.name in ({{pod_var}})"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Sent Metric Point Rate / Minute",
+          "layout": {
+            "column": 11,
+            "row": 14,
+            "width": 2,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.bar"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "SELECT rate(sum(otelcol_exporter_sent_metric_points), 1 SECONDS) as ' Sent Metric Points / minute' FROM Metric SINCE 60 MINUTES AGO UNTIL NOW FACET exporter LIMIT 100 where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
+          "title": "Refused Metric Points",
+          "layout": {
+            "column": 3,
+            "row": 17,
+            "width": 3,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_receiver_refused_metric_points) facet tuple(receiver, transport, k8s.pod.name) where k8s.pod.name in ({{pod_var}}) TIMESERIES "
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Refused Metric Point Rate / minute",
+          "layout": {
+            "column": 6,
+            "row": 17,
+            "width": 2,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.bar"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "SELECT rate(sum(otelcol_receiver_refused_metric_points), 1 SECONDS) FROM Metric SINCE 60 MINUTES AGO UNTIL NOW LIMIT 100 FACET tuple(receiver) where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
+          "title": "Failed Metric Points",
+          "layout": {
+            "column": 8,
+            "row": 17,
             "width": 3,
             "height": 3
           },
@@ -471,10 +792,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_metric_points), 1 minute) TIMESERIES facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_exporter_send_failed_metric_points) facet exporter, k8s.pod.name where k8s.pod.name in ({{pod_var}}) TIMESERIES "
               }
             ],
             "platformOptions": {
@@ -483,16 +802,16 @@
           }
         },
         {
-          "title": "Accepted Metric Point Rate / minute",
+          "title": "Failed Metric Point Rate / Minute",
           "layout": {
-            "column": 6,
-            "row": 11,
-            "width": 1,
+            "column": 11,
+            "row": 17,
+            "width": 2,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.bar"
           },
           "rawConfiguration": {
             "facet": {
@@ -500,10 +819,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "SELECT rate(sum(otelcol_exporter_send_failed_metric_points), 1 SECONDS) as ' Sent Metric Points / minute' FROM Metric SINCE 60 MINUTES AGO UNTIL NOW FACET exporter LIMIT 100 where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
               }
             ],
             "platformOptions": {
@@ -514,41 +831,37 @@
         {
           "title": "",
           "layout": {
-            "column": 7,
-            "row": 11,
-            "width": 1,
-            "height": 6
+            "column": 1,
+            "row": 20,
+            "width": 12,
+            "height": 1
           },
           "linkedEntityGuids": null,
           "visualization": {
             "id": "viz.markdown"
           },
           "rawConfiguration": {
-            "text": " "
+            "text": "# Logs Pipeline"
           }
         },
         {
-          "title": "Sent Metric Point Rate / Minute",
+          "title": "Export Ratio %",
           "layout": {
-            "column": 8,
-            "row": 11,
-            "width": 1,
-            "height": 3
+            "column": 1,
+            "row": 21,
+            "width": 2,
+            "height": 6
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.bullet"
           },
           "rawConfiguration": {
-            "facet": {
-              "showOtherSeries": false
-            },
+            "limit": 100,
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select (sum(otelcol_exporter_sent_log_records) / sum(otelcol_receiver_accepted_log_records)) * 100 as 'Export Ratio %' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
               }
             ],
             "platformOptions": {
@@ -557,16 +870,16 @@
           }
         },
         {
-          "title": "Sent Metric Point Rate / Minute",
+          "title": "Accepted Log Records",
           "layout": {
-            "column": 9,
-            "row": 11,
-            "width": 4,
+            "column": 3,
+            "row": 21,
+            "width": 3,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.area"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
@@ -577,10 +890,44 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_metric_points), 1 minute) TIMESERIES facet exporter where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_receiver_accepted_log_records) facet tuple(receiver, transport, k8s.pod.name) where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) TIMESERIES "
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Accepted Log Record Rate / minute",
+          "layout": {
+            "column": 6,
+            "row": 21,
+            "width": 2,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.billboard"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_receiver_accepted_log_records), 1 minute) as 'Log records/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
               }
             ],
             "platformOptions": {
@@ -589,16 +936,55 @@
           }
         },
         {
-          "title": "Refused Metric Point Rate / minute",
+          "title": "Sent Log Records",
           "layout": {
-            "column": 3,
-            "row": 14,
+            "column": 8,
+            "row": 21,
             "width": 3,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.table"
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_exporter_sent_log_records) facet concat('exporter: ',exporter, ' pod: ', k8s.pod.name) where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) TIMESERIES "
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Sent Log Record Rate / minute",
+          "layout": {
+            "column": 11,
+            "row": 21,
+            "width": 2,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.billboard"
           },
           "rawConfiguration": {
             "facet": {
@@ -606,10 +992,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_metric_points), 1 minute) as 'Spans/minute' facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_exporter_sent_log_records), 1 minute) as 'Log records/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}})"
               }
             ],
             "platformOptions": {
@@ -618,16 +1002,55 @@
           }
         },
         {
-          "title": "Refused Metric Point Rate / minute",
+          "title": "Refused Log Records",
+          "layout": {
+            "column": 3,
+            "row": 24,
+            "width": 3,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_receiver_refused_log_records) facet tuple(receiver, transport, k8s.pod.name) where k8s.pod.name in ({{pod_var}}) TIMESERIES "
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "title": "Refused Log Records Rate / minute",
           "layout": {
             "column": 6,
-            "row": 14,
-            "width": 1,
+            "row": 24,
+            "width": 2,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.bar"
           },
           "rawConfiguration": {
             "facet": {
@@ -635,10 +1058,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_receiver_refused_log_records), 1 minute) as 'Log records/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) facet transport"
               }
             ],
             "platformOptions": {
@@ -647,45 +1068,55 @@
           }
         },
         {
-          "title": "Failed Metric Point Rate / minute",
+          "title": "Failed Log Records",
           "layout": {
             "column": 8,
-            "row": 14,
-            "width": 1,
+            "row": 24,
+            "width": 3,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.billboard"
+            "id": "viz.line"
           },
           "rawConfiguration": {
             "facet": {
               "showOtherSeries": false
             },
+            "legend": {
+              "enabled": true
+            },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select sum(otelcol_exporter_send_failed_log_records) facet exporter, k8s.pod.name where k8s.pod.name in ({{pod_var}}) TIMESERIES "
               }
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "thresholds": {
+              "isLabelVisible": true
+            },
+            "yAxisLeft": {
+              "zero": true
+            },
+            "yAxisRight": {
+              "zero": true
             }
           }
         },
         {
-          "title": "Failed Metric Point Rate / minute",
+          "title": "Failed Log Record Rate / minute",
           "layout": {
-            "column": 9,
-            "row": 14,
-            "width": 4,
+            "column": 11,
+            "row": 24,
+            "width": 2,
             "height": 3
           },
           "linkedEntityGuids": null,
           "visualization": {
-            "id": "viz.table"
+            "id": "viz.bar"
           },
           "rawConfiguration": {
             "facet": {
@@ -693,10 +1124,8 @@
             },
             "nrqlQueries": [
               {
-                "accountIds": [
-                  999999999
-                ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_metric_points), 1 minute) as 'Spans/minute' facet exporter where job in ({{otel_col_group}})"
+                "accountIds": [],
+                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_log_records), 1 minute) as 'Log records/minute' where job in ({{pod_var}}) OR job_label in ({{pod_var}}) or prometheus_job in ({{pod_var}}) or k8s.pod.name in ({{pod_var}}) facet exporter"
               }
             ],
             "platformOptions": {
@@ -709,25 +1138,26 @@
   ],
   "variables": [
     {
-      "name": "otel_col_group",
+      "name": "pod_var",
       "items": null,
       "defaultValues": [
         {
           "value": {
-            "string": "otelcol"
+            "string": "*"
           }
         }
       ],
       "nrqlQuery": {
         "accountIds": [
-          999999999
+          0
         ],
-        "query": "from Metric select uniques(service.name) where metricName like 'otelcol%'"
+        "query": "from Metric select uniques(k8s.pod.name) where metricName like 'otelcol%' since 1 week ago"
       },
       "options": {
-        "ignoreTimeRange": true
+        "ignoreTimeRange": true,
+        "excluded": false
       },
-      "title": "Collector Group",
+      "title": "OTel Collector Pod",
       "type": "NRQL",
       "isMultiSelection": true,
       "replacementStrategy": "STRING"
