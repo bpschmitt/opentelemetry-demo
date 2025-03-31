@@ -12,24 +12,24 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
-# Prompt the user for input
-echo -n "Please enter your New Relic License Key: "
-read user_input
+# # Prompt the user for input
+# echo -n "Please enter your New Relic License Key: "
+# read user_input
 
-# Check if input is empty
-if [ -z "$user_input" ]; then
-    echo "Error: Empty key. Please enter your New Relic License Key."
-    exit 1
-fi
+# # Check if input is empty
+# if [ -z "$user_input" ]; then
+#     echo "Error: Empty key. Please enter your New Relic License Key."
+#     exit 1
+# fi
 
-# Check if the opentelemetry-demo namespace already exists
-if kubectl get ns opentelemetry-demo &> /dev/null; then
-    echo "Namespace 'opentelemetry-demo' already exists."
-else
-    kubectl create ns opentelemetry-demo
-fi
+# # Check if the opentelemetry-demo namespace already exists
+# if kubectl get ns opentelemetry-demo &> /dev/null; then
+#     echo "Namespace 'opentelemetry-demo' already exists."
+# else
+#     kubectl create ns opentelemetry-demo
+# fi
 
-kubectl create secret generic newrelic-license-key --from-literal=license-key=$user_input -n opentelemetry-demo
+# kubectl create secret generic newrelic-license-key --from-literal=license-key=$user_input -n opentelemetry-demo
 
 # Check if the open-telemetry repo is already added
 if helm repo list | grep -q 'open-telemetry'; then
