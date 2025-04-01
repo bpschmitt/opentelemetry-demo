@@ -160,30 +160,59 @@ resource "newrelic_service_level" "productcatalog-service-level" {
     }
 }
 
-# Get the entity guid for the CartService OTel service
-data "newrelic_entity" "cartservice-entity" {
-  name = "cart"
+# Get the entity guid for the Ad Service OTel service
+data "newrelic_entity" "adservice-entity" {
+  name = "ad"
   tag {
     key = "accountID"
     value = "${var.account_id}"
   }
 }
 
-# Create a service level for CartService 
-resource "newrelic_service_level" "cartservice-service-level" {
-    guid = data.newrelic_entity.cartservice-entity.id
-    name = "Cart Service Level"
+# Create a service level for Ad Service 
+resource "newrelic_service_level" "adservice-service-level" {
+    guid = data.newrelic_entity.adservice-entity.id
+    name = "Ad Service Level"
     description = "Proportion of successful requests."
 
     events {
         account_id = var.account_id
         valid_events {
             from = "Span"
-            where = "entity.guid='${data.newrelic_entity.cartservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
+            where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
         }
         bad_events {
             from = "Span"
-            where = "entity.guid='${data.newrelic_entity.cartservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
+            where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
+        }
+    }
+
+    objective {
+        target = 99.25
+        time_window {
+            rolling {
+                count = 1
+                unit = "DAY"
+            }
+        }
+    }
+}
+
+# Create a service level for Payment Service 
+resource "newrelic_service_level" "paymentservice-service-level" {
+    guid = data.newrelic_entity.paymentservice-entity.id
+    name = "Payment Service Level"
+    description = "Proportion of successful requests."
+
+    events {
+        account_id = var.account_id
+        valid_events {
+            from = "Span"
+            where = "entity.guid='${data.newrelic_entity.paymentservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
+        }
+        bad_events {
+            from = "Span"
+            where = "entity.guid='${data.newrelic_entity.paymentservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
         }
     }
 
