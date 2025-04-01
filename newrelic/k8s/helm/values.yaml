@@ -94,6 +94,10 @@ opentelemetry-collector:
       value: opentelemetry-demo
   image:
     repository: "otel/opentelemetry-collector-contrib"
+  # Enable feature gate for recording the tail sampling policy
+  command:
+    extraArgs:
+      - --feature-gates=processor.tailsamplingprocessor.recordpolicy
   fullnameOverride: otel-collector
   mode: deployment
   presets:
@@ -164,8 +168,11 @@ opentelemetry-collector:
         endpoint: ${env:MY_POD_IP}:13133
 
     processors:
+
       batch: {}
+
       cumulativetodelta: {}
+
       k8sattributes:
         extract:
           metadata:
@@ -189,10 +196,12 @@ opentelemetry-collector:
             name: k8s.pod.uid
         - sources:
           - from: connection
+
       memory_limiter:
         check_interval: 5s
         limit_percentage: 80
         spike_limit_percentage: 25
+
       resource:
         attributes:
         - action: upsert
@@ -201,11 +210,13 @@ opentelemetry-collector:
         - action: insert
           from_attribute: k8s.pod.name
           key: service.instance.id
+
       # Prevents entity synthesis for Prometheus metrics
       resource/prom_fix:
         attributes:
         - key: service.name
           action: delete
+
       resourcedetection/env:
         detectors:
         - env
@@ -217,6 +228,7 @@ opentelemetry-collector:
           resource_attributes:
             host.id:
               enabled: true
+
       transform:
         error_mode: ignore
         log_statements:
@@ -235,7 +247,7 @@ opentelemetry-collector:
           - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
 
       ###########################################################################################################################
-      ## Lab 3 - Data Obfuscation
+      ## Data Obfuscation
       ## Overview: This transform rule converts the userSSN field to a partially obfuscated value using the replace_pattern statement
       ###########################################################################################################################
       transform/obfuscate:
@@ -246,38 +258,35 @@ opentelemetry-collector:
       ###########################################################################################################################
 
       ###########################################################################################################################
-      ## Lab 4 - Tail Sampling
+      ## Tail Sampling
       ## Overview: In this lab, you'll enable the workshop-test tail sampling policy which will only sample traces with more than
       ##           5 spans and traces slower than 200ms.  Additional tail sampling policy examples can be found at the link below.
       ## https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/tailsamplingprocessor/testdata/tail_sampling_config.yaml
       ##
       ###########################################################################################################################
       tail_sampling:
+        decision_wait: 10s
+        num_traces: 100
+        decision_cache:
+          sampled_cache_size: 1000
+          non_sampled_cache_size: 10000
         policies:
           [
-            {
-              name: default-collect-everything,
-              type: always_sample
-            },
             # {
-            #   name: workshop-test,
-            #   type: and,
-            #   and: {
-            #     and_sub_policy: 
-            #     [
-            #       {
-            #         name: min-spans,
-            #         type: span_count,
-            #         span_count: {min_spans: 5}
-            #       },
-            #       {
-            #         name: slow-traces,
-            #         type: latency,
-            #         latency: {threshold_ms: 200}
-            #       },
-            #     ]
-            #   }
+            #   name: default-collect-everything,
+            #   type: always_sample
             # },
+            # {
+            #   name: errors,
+            #   type: string_attribute,
+            #   string_attribute:
+            #     { key: otel.status_code, values: [ERROR] },
+            # },
+            {
+              name: slow-traces,
+              type: latency,
+              latency: {threshold_ms: 25}
+            },
             # {
             #   # apply probabilistic sampling
             #   name: only-50-percent,
@@ -334,9 +343,11 @@ opentelemetry-collector:
           load: null
           memory: null
           network: null
+
       httpcheck/frontend-proxy:
         targets:
         - endpoint: http://frontend-proxy:8080
+
       otlp:
         protocols:
           grpc:
@@ -349,9 +360,10 @@ opentelemetry-collector:
             endpoint: ${env:MY_POD_IP}:4318
 
       ###########################################################################################################################
-      ## Lab 4: Prometheus Metric Collection
+      ## Prometheus Metric Collection
       ## Overview: In this lab, the Prometheus Receiver is used to collect Prometheus metrics from three different sources.
-      ##           1) CoreDNS
+      ##           1) OTel Internal Telemetry
+      ##           2) CoreDNS
       ##           2) cAdvisor for container metrics
       ##########################################################################################################################
       prometheus:
@@ -493,11 +505,11 @@ opentelemetry-collector:
           - debug
           processors:
           - memory_limiter
-          # - tail_sampling
           - k8sattributes
           - resource
           - resourcedetection/env
           - transform
+          - tail_sampling
           - batch
           receivers:
           - otlp
