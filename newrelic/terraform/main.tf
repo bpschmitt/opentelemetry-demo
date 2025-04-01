@@ -161,7 +161,7 @@ resource "newrelic_service_level" "productcatalog-service-level" {
 }
 
 # Create a service level for Ad Service 
-resource "newrelic_service_level" "adservice-service-level" {
+resource "newrelic_service_level" "ad-service-level" {
     guid = data.newrelic_entity.ad-entity.id
     name = "Ad Service Level"
     description = "Proportion of successful requests."
@@ -262,7 +262,7 @@ resource "newrelic_nrql_alert_condition" "apm-service-levels" {
   enabled                        = true
 
   nrql {
-    query = "FROM Metric SELECT sum(newrelic.sli.good) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.cartservice-service-level.sli_guid}') FACET sli.guid"
+    query = "FROM Metric SELECT sum(newrelic.sli.good) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.checkout-service-level.sli_guid}') FACET sli.guid"
   }
 
   critical {
