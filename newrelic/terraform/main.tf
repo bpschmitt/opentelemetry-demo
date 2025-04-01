@@ -160,15 +160,6 @@ resource "newrelic_service_level" "productcatalog-service-level" {
     }
 }
 
-# Get the entity guid for the Ad Service OTel service
-data "newrelic_entity" "adservice-entity" {
-  name = "ad"
-  tag {
-    key = "accountID"
-    value = "${var.account_id}"
-  }
-}
-
 # Create a service level for Ad Service 
 resource "newrelic_service_level" "adservice-service-level" {
     guid = data.newrelic_entity.adservice-entity.id
