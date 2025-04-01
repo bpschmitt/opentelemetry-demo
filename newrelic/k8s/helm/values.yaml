@@ -482,7 +482,7 @@ opentelemetry-collector:
           - batch
           receivers:
           - otlp
-        metrics:
+        metrics/prom:
           exporters:
           - otlphttp/newrelic
           - debug
@@ -495,8 +495,20 @@ opentelemetry-collector:
           - cumulativetodelta
           - batch
           receivers:
-          - hostmetrics
           - prometheus
+        metrics:
+          exporters:
+          - otlphttp/newrelic
+          - debug
+          processors:
+          - memory_limiter
+          - resource
+          - resourcedetection/env
+          - k8sattributes
+          - cumulativetodelta
+          - batch
+          receivers:
+          - hostmetrics
           - redis
           - otlp
         traces:
