@@ -362,7 +362,11 @@ opentelemetry-collector:
             static_configs:
             - targets:
               - ${env:MY_POD_IP}:8888
-              
+            relabel_configs:
+              - action: replace
+                target_label: job_label
+                replacement: opentelemetry-collector
+
           - job_name: coredns
             scrape_interval: 30s
             kubernetes_sd_configs:
@@ -406,6 +410,9 @@ opentelemetry-collector:
                 source_labels:
                 - __meta_kubernetes_pod_node_name
                 target_label: node
+              - action: replace
+                target_label: job_label
+                replacement: coredns
             metric_relabel_configs:
               - action: keep
                 regex: coredns_.*
