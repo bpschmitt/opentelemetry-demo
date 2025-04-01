@@ -37,7 +37,7 @@ resource "newrelic_workload" "otel-demo-all-entities" {
 
 
 # Get the entity guid for the AdService OTel service
-data "newrelic_entity" "adservice-entity" {
+data "newrelic_entity" "ad-entity" {
   name = "ad"
   tag {
     key = "accountID"
@@ -162,7 +162,7 @@ resource "newrelic_service_level" "productcatalog-service-level" {
 
 # Create a service level for Ad Service 
 resource "newrelic_service_level" "adservice-service-level" {
-    guid = data.newrelic_entity.adservice-entity.id
+    guid = data.newrelic_entity.ad-entity.id
     name = "Ad Service Level"
     description = "Proportion of successful requests."
 
@@ -170,11 +170,11 @@ resource "newrelic_service_level" "adservice-service-level" {
         account_id = var.account_id
         valid_events {
             from = "Span"
-            where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
+            where = "entity.guid='${data.newrelic_entity.ad-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
         }
         bad_events {
             from = "Span"
-            where = "entity.guid='${data.newrelic_entity.adservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
+            where = "entity.guid='${data.newrelic_entity.ad-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
         }
     }
 
@@ -191,7 +191,7 @@ resource "newrelic_service_level" "adservice-service-level" {
 
 # Create a service level for Payment Service 
 resource "newrelic_service_level" "paymentservice-service-level" {
-    guid = data.newrelic_entity.paymentservice-entity.id
+    guid = data.newrelic_entity.payment-entity.id
     name = "Payment Service Level"
     description = "Proportion of successful requests."
 
@@ -199,11 +199,11 @@ resource "newrelic_service_level" "paymentservice-service-level" {
         account_id = var.account_id
         valid_events {
             from = "Span"
-            where = "entity.guid='${data.newrelic_entity.paymentservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
+            where = "entity.guid='${data.newrelic_entity.payment-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer'))"
         }
         bad_events {
             from = "Span"
-            where = "entity.guid='${data.newrelic_entity.paymentservice-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
+            where = "entity.guid='${data.newrelic_entity.payment-entity.id}' AND (span.kind IN ('server', 'consumer') OR kind IN ('server', 'consumer')) AND otel.status_code = 'ERROR'"
         }
     }
 
