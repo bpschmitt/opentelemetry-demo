@@ -246,6 +246,8 @@ opentelemetry-collector:
           statements:
             - replace_pattern(attributes["userSSN"], "^[0-9]{3}.[0-9]{2}", "***-**")
       ###########################################################################################################################
+      # End Data Obfuscation
+      ###########################################################################################################################
 
       ###########################################################################################################################
       ## Tail Sampling
@@ -273,6 +275,8 @@ opentelemetry-collector:
               latency: { threshold_ms: 20 }
             },
           ]
+      ###########################################################################################################################
+      # End Tail Sampling
       ###########################################################################################################################
 
     receivers:
@@ -337,6 +341,10 @@ opentelemetry-collector:
               - http://*
               - https://*
             endpoint: ${env:MY_POD_IP}:4318
+      
+      redis:
+        collection_interval: 30s
+        endpoint: valkey-cart:6379
 
       ###########################################################################################################################
       ## Prometheus Metric Collection
@@ -440,9 +448,9 @@ opentelemetry-collector:
               insecure_skip_verify: false
               server_name: kubernetes
 
-      redis:
-        collection_interval: 30s
-        endpoint: valkey-cart:6379
+      ###########################################################################################################################
+      #  End Prometheus Metric Collection
+      ###########################################################################################################################
 
     service:
       extensions:
@@ -461,20 +469,20 @@ opentelemetry-collector:
           - batch
           receivers:
           - otlp
-        metrics/prom:
-          exporters:
-          - otlphttp/newrelic
-          - debug
-          processors:
-          - memory_limiter
-          - resource
-          - resourcedetection/env
-          - resource/prom_fix
-          - k8sattributes
-          - cumulativetodelta
-          - batch
-          receivers:
-          - prometheus
+        # metrics/prom:
+        #   exporters:
+        #   - otlphttp/newrelic
+        #   - debug
+        #   processors:
+        #   - memory_limiter
+        #   - resource
+        #   - resourcedetection/env
+        #   - resource/prom_fix
+        #   - k8sattributes
+        #   - cumulativetodelta
+        #   - batch
+        #   receivers:
+        #   - prometheus
         metrics:
           exporters:
           - otlphttp/newrelic
@@ -500,7 +508,7 @@ opentelemetry-collector:
           - resource
           - resourcedetection/env
           - transform
-          - tail_sampling
+          # - tail_sampling
           - batch
           receivers:
           - otlp
@@ -510,70 +518,70 @@ opentelemetry-collector:
           level: basic
 
 components:
-  ## Demo Components are named objects (services) with several properties
+  # # Demo Components are named objects (services) with several properties
   # demoService:
-  ## Enable the component (service)
+  # # Enable the component (service)
   #   enabled: true
   #   useDefault:
-  ## Use default environment variables
+  # # Use default environment variables
   #     env: true
-  ## Override Image repository and Tag. Tag will use appVersion as default.
-  ## Component's name will be applied to end of this value.
+  # # Override Image repository and Tag. Tag will use appVersion as default.
+  # # Component's name will be applied to end of this value.
   #   imageOverride: {}
-  ## Optional service definitions to apply
+  # # Optional service definitions to apply
   #   service:
-  ## Service Type to use for this component. Default is ClusterIP.
+  # # Service Type to use for this component. Default is ClusterIP.
   #     type: ClusterIP
-  ## Service Port to use to expose this component. Default is nil
+  # # Service Port to use to expose this component. Default is nil
   #     port: 8080
-  ## Service Node Port to use to expose this component on a NodePort service. Default is nil
+  # # Service Node Port to use to expose this component on a NodePort service. Default is nil
   #     nodePort: 30080
-  ## Service Annotations to add to this component
+  # # Service Annotations to add to this component
   #     annotations: {}
-  ## Additional service ports to use to expose this component
+  # # Additional service ports to use to expose this component
   #   ports:
   #     - name: extraServicePort
   #       value: 8081
-  ## Environment variables to add to the component's pod
+  # # Environment variables to add to the component's pod
   #   env:
-  ## Environment variables that upsert (append + merge) into the `env` specification for this component.
-  ## A variable named OTEL_RESOURCE_ATTRIBUTES_EXTRA will have its value appended to the OTEL_RESOURCE_ATTRIBUTES value.
+  # # Environment variables that upsert (append + merge) into the `env` specification for this component.
+  # # A variable named OTEL_RESOURCE_ATTRIBUTES_EXTRA will have its value appended to the OTEL_RESOURCE_ATTRIBUTES value.
   #   envOverrides:
-  ## Pod Scheduling rules for nodeSelector, affinity, or tolerations.
+  # # Pod Scheduling rules for nodeSelector, affinity, or tolerations.
   #   schedulingRules:
   #     nodeSelector: {}
   #     affinity: {}
   #     tolerations: []
-  ## Pod Annotations to add to this component
+  # # Pod Annotations to add to this component
   #   podAnnotations: {}
-  ## Resources for this component
+  # # Resources for this component
   #   resources: {}
-  ## Container security context for setting user ID (UID), group ID (GID) and other security policies
+  # # Container security context for setting user ID (UID), group ID (GID) and other security policies
   #   securityContext:
-  ## Ingresses rules to add for the to the component
+  # # Ingresses rules to add for the to the component
   # ingress:
-  ## Enable the creation of Ingress rules. Default is false
+  # # Enable the creation of Ingress rules. Default is false
   #   enabled: false
-  ## Annotations to add to the ingress rule
+  # # Annotations to add to the ingress rule
   #   annotations: {}
-  ## Which Ingress class (controller) to use. Default is unspecified.
+  # # Which Ingress class (controller) to use. Default is unspecified.
   #   ingressClassName: nginx
-  ## Hosts definitions for the Ingress rule
+  # # Hosts definitions for the Ingress rule
   #   hosts:
   #     - host: demo.example.com
-  ## Each host can have multiple paths/routes
+  # # Each host can have multiple paths/routes
   #       paths:
   #         - path: /
   #           pathType: Prefix
   #           port: 8080
-  ## Optional TLS specifications for the Ingress rule
+  # # Optional TLS specifications for the Ingress rule
   #   tls:
   #     - secretName: demo-tls
   #       hosts:
   #         - demo.example.com
-  ## Additional ingresses - only created if ingress.enabled is true
-  ## Useful for when differently annotated ingress services are required
-  ## Each additional ingress needs key "name" set to something unique
+  # # Additional ingresses - only created if ingress.enabled is true
+  # # Useful for when differently annotated ingress services are required
+  # # Each additional ingress needs key "name" set to something unique
   #   additionalIngresses: []
   #     - name: extra-demo-ingress
   #       ingressClassName: nginx
@@ -588,11 +596,11 @@ components:
   #         - secretName: demo-tls
   #           hosts:
   #             - demo.example.com
-  ## Command to use in the container spec, in case you don't want to go with the default command from the image.
+  # # Command to use in the container spec, in case you don't want to go with the default command from the image.
   #   command: []
-  ## Configuration to for this component; will create a Volume, and Mount backed by an optionally created ConfigMap.
-  ## The name, mountPath are required, and one of existingConfigMap or data is required.
-  ## If an existing ConfigMap is not provided, the contents under data will be used for the created ConfigMap.
+  # # Configuration to for this component; will create a Volume, and Mount backed by an optionally created ConfigMap.
+  # # The name, mountPath are required, and one of existingConfigMap or data is required.
+  # # If an existing ConfigMap is not provided, the contents under data will be used for the created ConfigMap.
   #   mountedConfigMaps: []
   #     - name: my-config
   #       mountPath: /etc/config
