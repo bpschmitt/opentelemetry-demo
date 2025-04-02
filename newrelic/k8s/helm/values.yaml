@@ -34,17 +34,7 @@ default:
     - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       value: delta
     - name: OTEL_RESOURCE_ATTRIBUTES
-      value: >- 
-        service.name=$(OTEL_SERVICE_NAME),
-        service.namespace=opentelemetry-demo,
-        service.version={{ .Chart.AppVersion }},
-        service.instance.id=$(OTEL_POD_NAME),
-        k8s.container.name=$(OTEL_K8S_CONTAINER_NAME),
-        k8s.pod.name=$(OTEL_POD_NAME),
-        k8s.pod.ip=$(OTEL_POD_IP),
-        k8s.pod.uid=$(OTEL_POD_UID),
-        k8s.namespace.name=$(OTEL_NAMESPACE_NAME),
-        k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+      value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version={{ .Chart.AppVersion }},service.instance.id=$(OTEL_POD_NAME),k8s.container.name=$(OTEL_K8S_CONTAINER_NAME),k8s.pod.name=$(OTEL_POD_NAME),k8s.pod.ip=$(OTEL_POD_IP),k8s.pod.uid=$(OTEL_POD_UID),k8s.namespace.name=$(OTEL_NAMESPACE_NAME),k8s.cluster.name=$(OTEL_CLUSTER_NAME)
 
   # Allows overriding and additions to .Values.default.env
   envOverrides: []
@@ -265,34 +255,23 @@ opentelemetry-collector:
       ##
       ###########################################################################################################################
       tail_sampling:
-        decision_wait: 10s
-        num_traces: 100
+        decision_wait: 5s
+        num_traces: 10000
         decision_cache:
-          sampled_cache_size: 1000
-          non_sampled_cache_size: 10000
+          sampled_cache_size: 100000
+          non_sampled_cache_size: 100000
         policies:
           [
-            # {
-            #   name: default-collect-everything,
-            #   type: always_sample
-            # },
-            # {
-            #   name: errors,
-            #   type: string_attribute,
-            #   string_attribute:
-            #     { key: otel.status_code, values: [ERROR] },
-            # },
             {
-              name: slow-traces,
-              type: latency,
-              latency: {threshold_ms: 25}
+              name: trace-status-policy,
+              type: status_code,
+              status_code: { status_codes: [ERROR] }
             },
-            # {
-            #   # apply probabilistic sampling
-            #   name: only-50-percent,
-            #   type: probabilistic,
-            #   probabilistic: { sampling_percentage: 50 },
-            # },
+            {
+              name: slow-traces-policy,
+              type: latency,
+              latency: { threshold_ms: 20}
+            },
           ]
       ###########################################################################################################################
 
