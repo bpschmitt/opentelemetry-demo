@@ -206,6 +206,8 @@ opentelemetry-collector:
         attributes:
         - key: service.name
           action: delete
+        - key: service_name
+          action: delete
 
       resourcedetection/env:
         detectors:
@@ -514,7 +516,7 @@ opentelemetry-collector:
           - otlp
       telemetry:
         metrics:
-          address: ${MY_POD_IP}:8888
+          address: 0.0.0.0:8888
           level: basic
 
 components:
