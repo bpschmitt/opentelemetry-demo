@@ -25,7 +25,7 @@ provider "newrelic" {
 
 # Create a workload with all entities deployed to the demo cluster 
 resource "newrelic_workload" "otel-demo-all-entities" {
-    name = "OpenTelemetry Demo - All Entities"
+    name = "OTel Astronomy Shop - All Entities"
     account_id = var.account_id
 
     entity_search_query {
