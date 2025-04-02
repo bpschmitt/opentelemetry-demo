@@ -270,7 +270,7 @@ opentelemetry-collector:
             {
               name: slow-traces-policy,
               type: latency,
-              latency: { threshold_ms: 20}
+              latency: { threshold_ms: 20 }
             },
           ]
       ###########################################################################################################################
