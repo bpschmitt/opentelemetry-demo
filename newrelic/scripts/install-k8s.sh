@@ -50,4 +50,5 @@ if ! helm upgrade --install otel-demo open-telemetry/opentelemetry-demo -n opent
     exit 1
 fi
 
+echo ""
 echo "OpenTelemetry demo installation completed successfully!"
