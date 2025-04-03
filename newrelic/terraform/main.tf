@@ -190,7 +190,7 @@ resource "newrelic_service_level" "ad-service-level" {
 }
 
 # Create a service level for Payment Service 
-resource "newrelic_service_level" "paymentservice-service-level" {
+resource "newrelic_service_level" "payment-service-level" {
     guid = data.newrelic_entity.payment-entity.id
     name = "Payment Service Level"
     description = "Proportion of successful requests."
@@ -262,7 +262,7 @@ resource "newrelic_nrql_alert_condition" "apm-service-levels" {
   enabled                        = true
 
   nrql {
-    query = "FROM Metric SELECT (sum(newrelic.sli.valid) - sum(newrelic.sli.bad)) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.checkout-service-level.sli_guid}','${newrelic_service_level.payment-service-level.sli_guid}','${newrelic_service_level.ad-service-level.sli_guid}','${newrelic_service_level.product-catalogservice-level.sli_guid}') FACET sli.guid"
+    query = "FROM Metric SELECT (sum(newrelic.sli.valid) - sum(newrelic.sli.bad)) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.checkout-service-level.sli_guid}','${newrelic_service_level.payment-service-level.sli_guid}','${newrelic_service_level.ad-service-level.sli_guid}','${newrelic_service_level.productcatalog-service-level.sli_guid}') FACET sli.guid"
   }
 
   critical {
