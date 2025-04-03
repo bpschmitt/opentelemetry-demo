@@ -486,7 +486,7 @@ opentelemetry-collector:
         #   - k8sattributes
         #   - cumulativetodelta
         #   - batch
-        # receivers:
+        #   receivers:
         #   - prometheus
         metrics:
           exporters:
