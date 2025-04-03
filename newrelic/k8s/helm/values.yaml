@@ -367,6 +367,9 @@ opentelemetry-collector:
       #         - action: replace
       #           target_label: job_label
       #           replacement: opentelemetry-collector
+      #       metric_relabel_configs:
+      #         - action: labeldrop
+      #           regex: service.name
 
       #     - job_name: coredns
       #       scrape_interval: 30s
@@ -471,20 +474,6 @@ opentelemetry-collector:
           - batch
           receivers:
           - otlp
-        # metrics/prom:
-        #   exporters:
-        #   - otlphttp/newrelic
-        #   - debug
-        #   processors:
-        #   - memory_limiter
-        #   - resource
-        #   - resourcedetection/env
-        #   - resource/prom_fix
-        #   - k8sattributes
-        #   - cumulativetodelta
-        #   - batch
-        #   receivers:
-        #   - prometheus
         metrics:
           exporters:
           - otlphttp/newrelic
@@ -492,11 +481,13 @@ opentelemetry-collector:
           processors:
           - memory_limiter
           - resource
+          - resource/prom_fix
           - resourcedetection/env
           - k8sattributes
           - cumulativetodelta
           - batch
           receivers:
+          - prometheus
           - hostmetrics
           - redis
           - otlp
