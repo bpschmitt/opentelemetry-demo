@@ -262,7 +262,7 @@ resource "newrelic_nrql_alert_condition" "apm-service-levels" {
   enabled                        = true
 
   nrql {
-    query = "FROM Metric SELECT sum(newrelic.sli.good) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.checkout-service-level.sli_guid}') FACET sli.guid"
+    query = "FROM Metric SELECT (sum(newrelic.sli.valid) - sum(newrelic.sli.bad)) / sum(newrelic.sli.valid) as 'SLI' WHERE sli.guid IN ('${newrelic_service_level.checkout-service-level.sli_guid}') FACET sli.guid"
   }
 
   critical {
