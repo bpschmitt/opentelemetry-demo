@@ -136,6 +136,7 @@ services:
       - PRODUCT_CATALOG_ADDR
       - SHIPPING_ADDR
       - KAFKA_ADDR
+      - GOMEMLIMIT=16MiB
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
@@ -182,8 +183,7 @@ services:
       - CURRENCY_PORT
       - VERSION=${IMAGE_VERSION}
       - OTEL_EXPORTER_OTLP_ENDPOINT
-      # The C++ SDK does not support OTEL_SERVICE_NAME
-      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.name=currency
+      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.name=currency # The C++ SDK does not support OTEL_SERVICE_NAME
     depends_on:
       otel-collector:
         condition: service_started
@@ -464,6 +464,7 @@ services:
       - PRODUCT_CATALOG_RELOAD_INTERVAL
       - FLAGD_HOST
       - FLAGD_PORT
+      - GOMEMLIMIT=16MiB
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
@@ -515,8 +516,7 @@ services:
     deploy:
       resources:
         limits:
-          # This is high to enable supporting the recommendationCache feature flag use case
-          memory: 500M
+          memory: 500M # This is high to enable supporting the recommendationCache feature flag use case
     restart: unless-stopped
     ports:
       - "${RECOMMENDATION_PORT}"
@@ -580,6 +580,7 @@ services:
     environment:
       - FLAGD_OTEL_COLLECTOR_URI=${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - FLAGD_METRICS_EXPORTER=otel
+      - GOMEMLIMIT=60MiB
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=flagd
     command: ["start", "--uri", "file:./etc/flagd/demo.flagd.json"]
@@ -674,7 +675,7 @@ services:
     volumes:
       - ${HOST_FILESYSTEM}:/hostfs:ro
       - ${DOCKER_SOCK}:/var/run/docker.sock:ro
-      - ./config/otel-config-docker.yaml:/etc/otelcol-config.yml
+      - ../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml
       - ./logs:/logs
       - ./checkpoint:/checkpoint
     ports:
