@@ -230,7 +230,7 @@ resource "newrelic_one_dashboard_json" "collector_dashboard" {
 }
 
 resource "newrelic_entity_tags" "collector_dashboard" {
-	guid = newrelic_one_dashboard_json.collector__dashboard.guid
+	guid = newrelic_one_dashboard_json.collector_dashboard.guid
 	tag {
     	     key    = "terraform"
     	     values = [true]
