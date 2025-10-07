@@ -10,7 +10,7 @@ spec:
     args: ["-c", "while true; do /script/customevent.sh; sleep 15; done"]
     env:
     - name: OTLP_COLLECTOR_ENDPOINT
-      value: "newrelic-otel-otelcol.default.svc.cluster.local:4318/v1/logs"
+      value: "otel-collector.opentelemetry-demo.svc.cluster.local:4318/v1/logs"
     volumeMounts:
     - name: script-volume
       mountPath: /script
@@ -64,9 +64,9 @@ data:
                   },
                   "attributes": [
                     {
-                      "key": "userSocialId",
+                      "key": "userSSN",
                       "value": {
-                        "stringValue": "123.456.789-10"
+                        "stringValue": "123-45-6789"
                       }
                     },
                     {
