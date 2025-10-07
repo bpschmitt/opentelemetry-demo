@@ -44,7 +44,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "FROM Metric select uniqueCount(service_instance_id) as 'Instances' where metricName = 'otelcol_process_cpu_seconds' where job in ({{otel_col_group}})"
+                "query": "FROM Metric select uniqueCount(service_instance_id) as 'Instances' where metricName = 'otelcol_process_cpu_seconds' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -73,7 +73,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "SELECT average((`__result_0`) * 100) as 'CPU Utilization %' FROM (SELECT rate(sum(otelcol_process_cpu_seconds), 1 SECONDS) AS `__result_0` FROM Metric where job in ({{otel_col_group}}) FACET service_instance_id LIMIT 100) LIMIT 100"
+                "query": "SELECT average((`__result_0`) * 100) as 'CPU Utilization %' FROM (SELECT rate(sum(otelcol_process_cpu_seconds), 1 SECONDS) AS `__result_0` FROM Metric where job_label in ('opentelemetry-collector') FACET service_instance_id LIMIT 100) LIMIT 100"
               }
             ],
             "platformOptions": {
@@ -102,7 +102,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select average(otelcol_process_memory_rss) as 'Memory Utilization' where job in ({{otel_col_group}})"
+                "query": "from Metric select average(otelcol_process_memory_rss) as 'Memory Utilization' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -145,7 +145,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select (sum(otelcol_exporter_sent_spans) / sum(otelcol_receiver_accepted_spans)) * 100 as 'Export Ratio %' where job in ({{otel_col_group}})"
+                "query": "from Metric select (sum(otelcol_exporter_sent_spans) / sum(otelcol_receiver_accepted_spans)) * 100 as 'Export Ratio %' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -177,7 +177,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_spans), 1 minute) TIMESERIES facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_accepted_spans), 1 minute) TIMESERIES facet tuple(receiver, transport) where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -206,7 +206,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_accepted_spans), 1 minute) as 'Spans/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -251,7 +251,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_sent_spans), 1 minute) as 'Spans/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -283,7 +283,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_spans), 1 minute) TIMESERIES facet exporter where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_sent_spans), 1 minute) TIMESERIES facet exporter where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -312,7 +312,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_spans), 1 minute) as 'Spans/minute' facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_refused_spans), 1 minute) as 'Spans/minute' facet tuple(receiver, transport) where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -341,7 +341,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_refused_spans), 1 minute) as 'Spans/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -370,7 +370,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -399,7 +399,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' facet exporter where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_spans), 1 minute) as 'Spans/minute' facet exporter where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -442,7 +442,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select (sum(otelcol_exporter_sent_metric_points) / sum(otelcol_receiver_accepted_metric_points)) * 100 as 'Export Ratio %' where job in ({{otel_col_group}})"
+                "query": "from Metric select (sum(otelcol_exporter_sent_metric_points) / sum(otelcol_receiver_accepted_metric_points)) * 100 as 'Export Ratio %' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -474,7 +474,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_metric_points), 1 minute) TIMESERIES facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_accepted_metric_points), 1 minute) TIMESERIES facet tuple(receiver, transport) where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -503,7 +503,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_accepted_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_accepted_metric_points), 1 minute) as 'Metric Points/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -548,7 +548,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_sent_metric_points), 1 minute) as 'Metric Points/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -580,7 +580,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_sent_metric_points), 1 minute) TIMESERIES facet exporter where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_sent_metric_points), 1 minute) TIMESERIES facet exporter where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -609,7 +609,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_metric_points), 1 minute) as 'Spans/minute' facet tuple(receiver, transport) where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_refused_metric_points), 1 minute) as 'Spans/minute' facet tuple(receiver, transport) where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -638,7 +638,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_receiver_refused_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_receiver_refused_metric_points), 1 minute) as 'Metric Points/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -667,7 +667,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_metric_points), 1 minute) as 'Metric Points/minute' where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_metric_points), 1 minute) as 'Metric Points/minute' where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -696,7 +696,7 @@
                 "accountIds": [
                   999999999
                 ],
-                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_metric_points), 1 minute) as 'Spans/minute' facet exporter where job in ({{otel_col_group}})"
+                "query": "from Metric select rate(sum(otelcol_exporter_send_failed_metric_points), 1 minute) as 'Spans/minute' facet exporter where job_label in ('opentelemetry-collector')"
               }
             ],
             "platformOptions": {
@@ -707,30 +707,5 @@
       ]
     }
   ],
-  "variables": [
-    {
-      "name": "otel_col_group",
-      "items": null,
-      "defaultValues": [
-        {
-          "value": {
-            "string": "otelcol"
-          }
-        }
-      ],
-      "nrqlQuery": {
-        "accountIds": [
-          999999999
-        ],
-        "query": "from Metric select uniques(service.name) where metricName like 'otelcol%'"
-      },
-      "options": {
-        "ignoreTimeRange": true
-      },
-      "title": "Collector Group",
-      "type": "NRQL",
-      "isMultiSelection": true,
-      "replacementStrategy": "STRING"
-    }
-  ]
+  "variables": []
 }
