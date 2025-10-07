@@ -49,7 +49,7 @@ resource "newrelic_workload" "otel-demo-services" {
 
 # Get the entity guid for the AdService OTel service
 data "newrelic_entity" "adservice-entity" {
-  name = "adservice"
+  name = "ad"
   tag {
     key = "accountID"
     value = "${var.account_id}"
@@ -58,7 +58,7 @@ data "newrelic_entity" "adservice-entity" {
 
 # Get the entity guid for the ProductCatalog OTel service
 data "newrelic_entity" "productcatalog-entity" {
-  name = "productcatalogservice"
+  name = "product-catalog"
   tag {
     key = "accountID"
     value = "${var.account_id}"
@@ -125,7 +125,7 @@ resource "newrelic_service_level" "productcatalog-service-level" {
 
 # Get the entity guid for the CartService OTel service
 data "newrelic_entity" "cartservice-entity" {
-  name = "cartservice"
+  name = "cart"
   tag {
     key = "accountID"
     value = "${var.account_id}"
