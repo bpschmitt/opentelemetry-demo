@@ -59,7 +59,7 @@ if ! helm repo update open-telemetry; then
 fi
 
 # Install/upgrade OpenTelemetry demo
-if ! helm upgrade --install otel-demo open-telemetry/opentelemetry-demo --version ${OTEL_DEMO_CHART_VERSION} -n opentelemetry-demo -f ../k8s/helm/values.yaml; then
+if ! helm upgrade --install otel-demo open-telemetry/opentelemetry-demo --version ${OTEL_DEMO_CHART_VERSION} -n opentelemetry-demo -f /workdir/opentelemetry-demo/newrelic/workshop/helm/values.yaml; then
     echo "Error: Failed to install or upgrade OpenTelemetry Demo to ${OTEL_DEMO_CHART_VERSION}."
     exit 1
 fi
