@@ -313,14 +313,6 @@ opentelemetry-collector:
               - http://*
               - https://*
             endpoint: ${env:MY_POD_IP}:4318
-      prometheus:
-        config:
-          scrape_configs:
-          - job_name: opentelemetry-collector
-            scrape_interval: 30s
-            static_configs:
-            - targets:
-              - ${env:MY_POD_IP}:8888
       redis:
         collection_interval: 30s
         endpoint: valkey-cart:6379
@@ -477,7 +469,6 @@ opentelemetry-collector:
           - cumulativetodelta
           - batch
           receivers:
-          # - prometheus
           - hostmetrics
           - redis
           - otlp
@@ -497,7 +488,6 @@ opentelemetry-collector:
           - otlp
       telemetry:
         metrics:
-          # address: ${env:MY_POD_IP}:8888
           level: basic
 
 components:
