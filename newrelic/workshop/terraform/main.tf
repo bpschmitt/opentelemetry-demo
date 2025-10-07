@@ -229,14 +229,14 @@ resource "newrelic_one_dashboard_json" "collector_dashboard" {
 	)
 }
 
-resource "newrelic_entity_tags" "otel_collector_flow_dashboard" {
-	guid = newrelic_one_dashboard_json.otel_collector_flow_dashboard.guid
+resource "newrelic_entity_tags" "collector_dashboard" {
+	guid = newrelic_one_dashboard_json.collector__dashboard.guid
 	tag {
     	     key    = "terraform"
     	     values = [true]
 	}
 }
 
-output "otel_collector_flow_dashboard" {
-      value = newrelic_one_dashboard_json.otel_collector_flow_dashboard.permalink
+output "collector_dashboard" {
+      value = newrelic_one_dashboard_json.collector_dashboard.permalink
 }
