@@ -315,7 +315,7 @@ opentelemetry-collector:
           - k8sattributes
           - memory_limiter
           - resource
-          - resource/newrelic_spanmetrics_flag
+          # - resource/newrelic_spanmetrics_flag
           - resourcedetection/env
           - transform
           - batch
