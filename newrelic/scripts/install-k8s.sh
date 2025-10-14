@@ -1,6 +1,7 @@
 #!/bin/bash
 
-OTEL_DEMO_CHART_VERSION="0.38.1"
+OTEL_DEMO_CHART_VERSION=0.38.1
+NR_K8S_OTEL_CHART_VERSION=0.8.50
 
 # Check if helm is installed
 if ! command -v helm &> /dev/null; then
@@ -28,16 +29,30 @@ fi
 if kubectl get ns opentelemetry-demo &> /dev/null; then
     echo "Namespace 'opentelemetry-demo' already exists."
 else
-    kubectl create ns opentelemetry-demo
+    kubectl create ns opentelemetry-demo && kubectl create secret generic newrelic-license-key --from-literal=license-key=$user_input -n opentelemetry-demo
 fi
 
-kubectl create secret generic newrelic-license-key --from-literal=license-key=$user_input -n opentelemetry-demo
+# Check if the newrelic namespace already exists
+if kubectl get ns newrelic &> /dev/null; then
+    echo "Namespace 'newrelic' already exists."
+else
+    kubectl create ns newrelic && kubectl create secret generic newrelic-license-key --from-literal=license-key=$user_input -n newrelic
+fi
 
 # Check if the open-telemetry repo is already added
 if helm repo list | grep -q 'open-telemetry'; then
     echo "Helm repository 'open-telemetry' is already added."
 else
     helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+    helm repo update open-telemetry
+fi
+
+# Check if the newrelic repo is already added
+if helm repo list | grep -q 'newrelic'; then
+    echo "Helm repository 'newrelic' is already added."
+else
+    helm repo add newrelic https://helm-charts.newrelic.com
+    helm repo update newrelic
 fi
 
 # Update Helm repository
@@ -53,3 +68,11 @@ if ! helm upgrade --install otel-demo open-telemetry/opentelemetry-demo --versio
 fi
 
 echo "OpenTelemetry Demo installation completed successfully!"
+
+# Install/upgrade New Relic OTel Collector demo
+if ! helm upgrade --install nr-k8s-otel-collector newrelic/nr-k8s-otel-collector --version ${NR_K8S_OTEL_CHART_VERSION} -n newrelic -f ../k8s/helm/nr-k8s-otel-collector-values.yaml; then
+    echo "Error: Failed to install or upgrade the New Relic OTel Collector to ${NR_K8S_OTEL_CHART_VERSION}."
+    exit 1
+fi
+
+echo "New Relic OTel Collector installation completed successfully!"
