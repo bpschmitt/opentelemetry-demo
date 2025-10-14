@@ -46,6 +46,15 @@ prometheus:
 jaeger:
   enabled: false
 
+components:
+  accounting:
+    # bump resources to prevent OOMKills
+    resources:
+      limits:
+        memory: 250Mi
+      requests:
+        memory: 150Mi
+
 opentelemetry-collector:
   enabled: true
   extraEnvs:
