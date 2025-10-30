@@ -49,6 +49,8 @@ jaeger:
 opentelemetry-collector:
   enabled: true
   extraEnvs:
+    - name: INTERNAL_TELEMETRY_SERVICE_NAME
+      value: astroshop-otel-collector
     - name: KUBE_NODE_NAME
       valueFrom:
         fieldRef:
