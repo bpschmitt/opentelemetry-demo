@@ -96,7 +96,7 @@ opentelemetry-collector:
 
     extensions:
       health_check:
-        endpoint: ${env:MY_POD_IP}:13133
+        endpoint: 0.0.0.0:13133
 
     processors:
       batch: {}
@@ -279,13 +279,53 @@ opentelemetry-collector:
           - otlp
       telemetry:
         metrics:
-          # address: ${env:MY_POD_IP}:8888
-          level: basic
+          level: "${env:INTERNAL_TELEMETRY_METRICS_LEVEL:-detailed}"
           readers:
-          - periodic:
-              exporter:
-                otlp:
-                  endpoint: http://${env:MY_POD_IP}:4318
-                  protocol: http/protobuf
-              interval: 30000
-              timeout: 5000
+            - periodic:
+                exporter:
+                  otlp:
+                    protocol: http/protobuf
+                    endpoint: "${env:INTERNAL_TELEMETRY_OTLP_ENDPOINT:-https://otlp.nr-data.net}"
+                    headers:
+                      - name: api-key
+                        value: "${env:NR_LICENSE_KEY}"
+        logs:
+          level: "${env:INTERNAL_TELEMETRY_LOG_LEVEL:-INFO}"
+          # default sampling config for reference to simplify overwrites even if not exposed via env var, e.g. --config=yaml:service::telemetry::logs::sampling::enabled::false
+          sampling:
+            enabled: true
+            # The interval in seconds that the logger applies to each sampling.
+            tick: 10s
+            # The number of messages logged at the start of each sampling::tick
+            initial: 10
+            # Sets the sampling policy for subsequent messages after sampling::initial messages are logged. When sampling::thereafter is set to N, every Nth message is logged and all others are dropped. If N is zero, the logger drops all messages after sampling::initial messages are logged.
+            thereafter: 100
+          processors:
+            - batch:
+                exporter:
+                  otlp:
+                    protocol: http/protobuf
+                    endpoint: "${env:INTERNAL_TELEMETRY_OTLP_ENDPOINT:-https://otlp.nr-data.net}"
+                    headers:
+                      - name: api-key
+                        value: "${env:NR_LICENSE_KEY}"
+        traces:
+          level: "${env:INTERNAL_TELEMETRY_TRACE_LEVEL:-basic}"
+          sampler:
+            parent_based:
+              root:
+                trace_id_ratio_based:
+                  ratio: ${env:INTERNAL_TELEMETRY_TRACE_SAMPLE_RATIO:-0.01}
+          processors:
+            - batch:
+                exporter:
+                  otlp:
+                    protocol: http/protobuf
+                    endpoint: "${env:INTERNAL_TELEMETRY_OTLP_ENDPOINT:-https://otlp.nr-data.net}"
+                    headers:
+                      - name: api-key
+                        value: "${env:NR_LICENSE_KEY}"
+        resource:
+          newrelic.collector_telemetry.version: 0.3.0
+          newrelic.service.type: otel_collector
+          service.name: "${env:INTERNAL_TELEMETRY_SERVICE_NAME:-otel-collector}"
