@@ -420,6 +420,6 @@ If port `8080` is already in use on your local machine, use a different port lik
 kubectl -n opentelemetry-demo port-forward svc/frontend-proxy 9999:8080
 ```
 
-After setting up port forwarding, you can access the Flagd UI at [http://localhost:4000/feature](http://localhost:4000/feature).
+After setting up port forwarding, you can access the Flagd UI at [http://localhost:8080/feature](http://localhost:8080/feature).
 
 ![flagdui](./images/flagdui.png)
