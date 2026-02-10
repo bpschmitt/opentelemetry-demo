@@ -43,6 +43,12 @@ components:
         memory: 300Mi
       requests:
         memory: 200Mi
+  product-catalog:
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        memory: 50Mi
 
 # Disable non-NR components
 opensearch:
