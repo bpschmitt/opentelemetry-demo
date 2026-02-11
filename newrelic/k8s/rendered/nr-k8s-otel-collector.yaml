@@ -26,7 +26,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
   annotations:
 ---
 # Source: nr-k8s-otel-collector/templates/daemonset-configmap.yaml
@@ -40,7 +40,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
 data:
   daemonset-config.yaml: |
     receivers:
@@ -626,6 +626,8 @@ data:
         detectors: [gcp, eks, ec2, aks, azure, oraclecloud]
         timeout: 2s
         override: false
+        eks:
+          node_from_env_var: KUBE_NODE_NAME
 
       resource/newrelic:
         attributes:
@@ -635,7 +637,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.0
+            value: 0.10.4
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -905,7 +907,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
 data:
   deployment-config.yaml: |
     receivers:
@@ -1411,7 +1413,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.0
+            value: 0.10.4
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1429,7 +1431,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.0
+            value: 0.10.4
 
       transform/events:
         log_statements:
@@ -1902,7 +1904,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
 rules:
   - apiGroups:
     - ""
@@ -2007,7 +2009,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
 subjects:
   - kind: ServiceAccount
     name: nr-k8s-otel-collector
@@ -2055,7 +2057,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
 spec:
   type: ClusterIP
   ports:
@@ -2084,7 +2086,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
 spec:
   selector:
     matchLabels:
@@ -2098,7 +2100,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: daemonset
       annotations:
-        checksum/config: 2b30748172ebc1d25c34cde7dd6c3436120e74028d504248a682ba0b3fc0a9eb
+        checksum/config: 8163d31adc2090037237eff5b30db260b7f658ff219ae84b90a70503500f7e2f
     spec:
       serviceAccountName: nr-k8s-otel-collector
       initContainers:
@@ -2125,7 +2127,13 @@ spec:
                 export NODE_CPU_ALLOCATABLE=$(awk "BEGIN {print ${NODE_CPU_ALLOCATABLE%?} / 1000}")
               fi
 
-              export NODE_MEMORY_ALLOCATABLE=$(kubectl get node $NODE_NAME -o jsonpath='{.status.allocatable.memory}' | numfmt --from=auto)
+              export NODE_MEMORY_ALLOCATABLE=$(kubectl get node $NODE_NAME -o jsonpath='{.status.allocatable.memory}' | awk '
+                /Ki$/ {printf "%.0f\n", $1 * 1024; next}
+                /Mi$/ {printf "%.0f\n", $1 * 1024^2; next}
+                /Gi$/ {printf "%.0f\n", $1 * 1024^3; next}
+                /m$/  {printf "%.0f\n", $1 / 1000; next}
+                {print $1}
+              ')
 
               if [[ -z "NODE_MEMORY_ALLOCATABLE" ]] || [[ "NODE_MEMORY_ALLOCATABLE" == "0" ]]; then
                 echo "Could not retrieve Memory allocatable for node $NODE_NAME"
@@ -2168,7 +2176,7 @@ spec:
             - --config
             - /config/daemonset-config.yaml
             - --feature-gates
-            - metricsgeneration.MatchAttributes
+            - metricsgeneration.MatchAttributes,-processor.resourcedetection.propagateerrors
           resources:
             {}
           env:
@@ -2317,7 +2325,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.4
 spec:
   replicas: 1
   minReadySeconds: 5
@@ -2333,7 +2341,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: a0d06691977232bc8023b721d7ca97feb36408f8447b2b57fac3eb13881631ef
+        checksum/config: e86cf4407558923e5ae2612dea6044b0a3942559d752156a8662192d9e63e873
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
