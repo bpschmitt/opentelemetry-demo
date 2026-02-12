@@ -40,9 +40,15 @@ components:
   accounting:
     resources:
       limits:
-        memory: 300Mi
-      requests:
         memory: 200Mi
+      requests:
+        memory: 100Mi
+  product-catalog:
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        memory: 50Mi
 
 # Disable non-NR components
 opensearch:
