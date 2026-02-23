@@ -18,5 +18,5 @@ variable "newrelic_region" {
 variable "app_name" {
   description = "Name of the Browser Application"
   type        = string
-  default     = "OpenTelemetry Demo Frontend - K8s"
+  default     = "OpenTelemetry Demo Frontend"
 }
