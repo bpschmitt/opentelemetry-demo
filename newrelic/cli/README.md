@@ -21,7 +21,7 @@ To compile the project into a single binary for your corresponding to your opera
 ```bash
 GOOS=darwin GOARCH=arm64 go build -o onr-otel-cli .
 ```
-
+1
 **macOS (Intel)**
 ```bash
 GOOS=darwin GOARCH=amd64 go build -o nr-otel-cli .

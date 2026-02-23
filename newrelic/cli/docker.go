@@ -1,103 +1,125 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func handleDocker(action string, cfg *Config) {
 	checkTools("docker")
 
-	// 1. Always use the standard docker-compose.yml as the base
+	// 1. Define paths
 	basePath := Paths["docker-compose"]
-
-	// Define env file paths relative to cli/ (repo root)
 	envPath := filepath.Join("..", "..", ".env")
 	envOverridePath := filepath.Join("..", "..", ".env.override")
 
+	// 2. Build base Docker Compose arguments
+	args := []string{"compose"}
+
+	if _, err := os.Stat(envPath); err == nil {
+		args = append(args, "--env-file", envPath)
+	}
+	if _, err := os.Stat(envOverridePath); err == nil {
+		args = append(args, "--env-file", envOverridePath)
+	}
+
+	args = append(args, "-f", basePath)
+
+	// 3. Handle Uninstall Early
 	if action == "uninstall" {
-		args := []string{
-			"compose",
-			"--env-file", envPath,
-			"--env-file", envOverridePath,
-			"-f", basePath,
-			"down",
-		}
+		args = append(args, "down", "-v")
 		env := append(os.Environ(), "NEW_RELIC_LICENSE_KEY=uninstall_dummy")
 		runCommand("docker", args, env)
 		return
 	}
 
-	// Explicitly ask if the user wants to enable Browser Monitoring
+	// 4. Browser Setup & Terraform
 	enableBrowser := promptBool("Do you want to enable Digital Experience Monitoring (Browser)?")
 	cfg.EnableBrowser = &enableBrowser
 	if *cfg.EnableBrowser {
-		setupBrowser(cfg)
-	}
-
-	// Track cleanups for temporary files
-	var cleanups []func()
-	defer func() {
-		for _, clean := range cleanups {
-			clean()
+		if cfg.ApiKey == "" {
+			cfg.ApiKey = promptUser("User API Key (NRAK)", validateUserApiKey)
 		}
-	}()
+		if cfg.AccountId == "" {
+			cfg.AccountId = promptUser("New Relic Account ID", validateNotEmpty)
+		}
 
-	// 2. Start building args with just the base file
-	args := []string{
-		"compose",
-		"--env-file", envPath,
-		"--env-file", envOverridePath,
-		"-f", basePath,
+		fmt.Println("\n>>> 🌍 Setting up Browser Monitoring (Terraform)...")
+		handleTerraform("install", "browser", cfg)
 	}
 
-	// 3. Dynamically append the browser override if enabled
+	// 5. Generate Permanent Patched Files
 	if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
-		replacements := map[string]string{
-			"$LICENSE_KEY":    cfg.Browser["LICENSE_KEY"],
-			"$APPLICATION_ID": cfg.Browser["APPLICATION_ID"],
-			"$ACCOUNT_ID":     cfg.Browser["ACCOUNT_ID"],
-			"$TRUST_KEY":      cfg.Browser["TRUST_KEY"],
-			"$AGENT_ID":       cfg.Browser["AGENT_ID"],
+		fmt.Println("\n>>> 📦 Injecting Browser IDs into Docker Patch...")
+
+		tfPath := Paths["tf-browser"]
+		tfEnv := buildEnvMap(cfg)
+
+		// Fetch js_config JSON from Terraform
+		cmd := exec.Command("terraform", "-chdir="+tfPath, "output", "-json", "browser_js_config")
+		cmd.Env = tfEnv
+		out, err := cmd.Output()
+		if err != nil {
+			fmt.Printf("Warning: Failed to read browser_js_config: %v\n", err)
 		}
 
-		tmpJsPath, jsCleanup, err := createPatchedTempFile(Paths["docker-patch"], replacements)
-		if err == nil {
-			cleanups = append(cleanups, jsCleanup)
+		var tfOutput string
+		json.Unmarshal(out, &tfOutput)
 
-			// Create the override YAML that mounts the patched file
-			overrideContent := fmt.Sprintf(`
+		var nrConfig BrowserConfig
+		json.Unmarshal([]byte(tfOutput), &nrConfig)
+
+		// Fetch License Key from Terraform
+		cmdKey := exec.Command("terraform", "-chdir="+tfPath, "output", "-raw", "browser_license_key")
+		cmdKey.Env = tfEnv
+		outKey, _ := cmdKey.Output()
+		licenseKey := strings.TrimSpace(string(outKey))
+
+		// Read the base monkey-patch.js
+		originalPatchPath := Paths["docker-patch"]
+		contentBytes, err := os.ReadFile(originalPatchPath)
+		if err != nil {
+			fmt.Printf("Error reading original patch: %v\n", err)
+		}
+		content := string(contentBytes)
+
+		// Replace placeholders
+		content = strings.ReplaceAll(content, "$LICENSE_KEY", licenseKey)
+		content = strings.ReplaceAll(content, "$APPLICATION_ID", formatID(nrConfig.Info.AppID))
+		content = strings.ReplaceAll(content, "$ACCOUNT_ID", formatID(nrConfig.LoaderConfig.AccountID))
+		content = strings.ReplaceAll(content, "$TRUST_KEY", formatID(nrConfig.LoaderConfig.TrustKey))
+		content = strings.ReplaceAll(content, "$AGENT_ID", formatID(nrConfig.LoaderConfig.AgentID))
+
+		// Write to a PERMANENT file with safe 0644 permissions
+		injectedPatchPath := filepath.Join(filepath.Dir(originalPatchPath), "monkey-patch-injected.js")
+		os.WriteFile(injectedPatchPath, []byte(content), 0644)
+
+		overrideYamlPath := filepath.Join(filepath.Dir(basePath), "docker-compose-browser.yaml")
+		overrideContent := fmt.Sprintf(`
 services:
   frontend:
     volumes:
-      - %s:/app/monkey-patch.js
-    command: 
+      - ./config/monkey-patch-injected.js:/app/monkey-patch.js:z
+    command:
       - "--require=./Instrumentation.js"
       - "--require=./monkey-patch.js"
       - "server.js"
-`, tmpJsPath)
+`)
+		os.WriteFile(overrideYamlPath, []byte(overrideContent), 0644)
 
-			tmpYaml, err := os.CreateTemp("", "tmp_docker-compose-*.yaml")
-			if err == nil {
-				tmpYaml.Write([]byte(overrideContent))
-				tmpYaml.Close()
-				cleanups = append(cleanups, func() { os.Remove(tmpYaml.Name()) })
-
-				// Append the override file (-f) to the arguments.
-				// Docker merges this ON TOP of the basePath.
-				args = append(args, "-f", tmpYaml.Name())
-			} else {
-				fmt.Printf("Warning: Failed to create temp override YAML: %v\n", err)
-			}
-		} else {
-			fmt.Printf("Warning: Failed to create temp patch JS: %v\n", err)
-		}
+		// Tell Docker to use this new file
+		args = append(args, "-f", overrideYamlPath)
 	}
 
-	// Final execution arguments
+	// 6. Final execution arguments
 	args = append(args, "up", "--force-recreate", "--remove-orphans", "--detach")
 
 	env := append(os.Environ(), "NEW_RELIC_LICENSE_KEY="+cfg.LicenseKey)
+
+	fmt.Printf("\n>>> Running Docker Compose...\n")
 	runCommand("docker", args, env)
 }

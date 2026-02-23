@@ -23,6 +23,7 @@ var (
 		"docker-patch":        filepath.Join("..", "docker", "config", "monkey-patch.js"),
 		"tf-account":          filepath.Join("..", "terraform", "nr_account"),
 		"tf-resources":        filepath.Join("..", "terraform", "nr_resources"),
+		"tf-browser":          filepath.Join("..", "terraform", "nr_browser"),
 	}
 
 	Charts = map[string]struct{ Name, Repo, Version, NS string }{
@@ -36,7 +37,6 @@ type Config struct {
 	EnableBrowser                                         *bool
 	SubaccountName, AdminGroupName                        string
 	ReadonlyUserEmail, ReadonlyUserName                   string
-	Browser                                               map[string]string
 }
 
 func loadConfig(cfg *Config) {
@@ -62,16 +62,9 @@ func loadConfig(cfg *Config) {
 		if cfg.LicenseKey == "" {
 			cfg.LicenseKey = promptUser("License Key (ends in NRAL)", validateLicenseKey)
 		}
-
-		// REMOVED: Global prompt for EnableBrowser.
-		// We still check if it was set via flags (e.g. --NEW_RELIC_ENABLE_BROWSER=true)
-		// allowing handlers to handle prompt
-		if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
-			setupBrowser(cfg)
-		}
 	}
 
-	if cfg.Target == "account" || cfg.Target == "resources" {
+	if cfg.Target == "account" || cfg.Target == "resources" || cfg.Target == "browser" {
 		if cfg.ApiKey == "" {
 			cfg.ApiKey = promptUser("User API Key (NRAK)", validateUserApiKey)
 		}
@@ -93,23 +86,5 @@ func loadConfig(cfg *Config) {
 		if cfg.ReadonlyUserName == "" {
 			cfg.ReadonlyUserName = promptUser("New Read-Only User Name", validateNotEmpty)
 		}
-	}
-}
-
-func setupBrowser(cfg *Config) {
-	keys := []string{"LICENSE_KEY", "APPLICATION_ID", "ACCOUNT_ID", "TRUST_KEY", "AGENT_ID"}
-	if cfg.Browser == nil {
-		cfg.Browser = make(map[string]string)
-	}
-	for _, k := range keys {
-		if cfg.Browser[k] != "" {
-			continue
-		}
-		envKey := "BROWSER_" + k
-		if val := os.Getenv(envKey); val != "" {
-			cfg.Browser[k] = val
-			continue
-		}
-		cfg.Browser[k] = promptUser("Browser "+k, validateNotEmpty)
 	}
 }

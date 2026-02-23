@@ -1,0 +1,90 @@
+# GENERATED FILE - DO NOT EDIT DIRECTLY
+components:
+  frontend:
+    command:
+      - "/nodejs/bin/node"
+      - "--require=./Instrumentation.js"
+      - "--require=./monkey-patch.js"
+      - "server.js"
+
+    mountedConfigMaps:
+      - name: frontend-patch-volume
+        mountPath: /app/monkey-patch.js
+        subPath: monkey-patch.js
+        data:
+          monkey-patch.js: |
+            const https = require('https');
+            const http = require('http');
+
+            let nrsnippet = '';
+
+            // 1. Fetch the authentic, un-truncated New Relic agent directly from the CDN
+            https.get('https://js-agent.nr-assets.net/nr-loader-spa-1.260.0.min.js', (res) => {
+              let agentCode = '';
+              res.on('data', chunk => agentCode += chunk);
+              res.on('end', () => {
+                nrsnippet = `
+                <script type="text/javascript">
+                window.NREUM||(NREUM={});
+                NREUM.info={"beacon":"bam.nr-data.net","errorBeacon":"bam.nr-data.net","licenseKey":"{{ .LicenseKey }}","applicationID":"{{ .AppID }}","sa":1};
+                NREUM.init={privacy:{cookies_enabled:true},ajax:{deny_list:["bam.nr-data.net"]},distributed_tracing:{enabled:true}};
+                NREUM.loader_config={accountID:"{{ .AccountID }}",trustKey:"{{ .TrustKey }}",agentID:"{{ .AgentID }}",licenseKey:"{{ .LicenseKey }}",applicationID:"{{ .AppID }}"};
+                </script>
+                <script type="text/javascript">
+                ${agentCode}
+                </script>
+                `;
+                console.log("New Relic Browser Agent successfully loaded into memory.");
+              });
+            }).on('error', (e) => {
+              console.error("Failed to fetch NR Agent:", e);
+            });
+
+            // 2. Intercept the HTTP Stream
+            const origCreate = http.createServer;
+            http.createServer = (handler) => origCreate.call(http, (req, res) => {
+              delete req.headers['accept-encoding'];
+
+              const origSetHeader = res.setHeader;
+              res.setHeader = function(name, value) {
+                if (name.toLowerCase() === 'content-length' || name.toLowerCase() === 'etag') {
+                  return this;
+                }
+                return origSetHeader.call(this, name, value);
+              };
+
+              const origWriteHead = res.writeHead;
+              res.writeHead = function(...args) {
+                this.removeHeader('content-length');
+                this.removeHeader('etag');
+                return origWriteHead.apply(this, args);
+              };
+
+              const origWrite = res.write;
+              let injected = false;
+              res.write = function(chunk, ...args) {
+                const cType = this.getHeader('content-type');
+                // Only inject if the script has finished downloading
+                if (!injected && nrsnippet !== '' && cType && cType.includes('text/html') && chunk) {
+                  let s = chunk.toString();
+                  // Inject directly into the <head> tag
+                  if (/(<head[^>]*>)/i.test(s)) {
+                    s = s.replace(/(<head[^>]*>)/i, '$1\n' + nrsnippet);
+                    chunk = Buffer.from(s);
+                    injected = true;
+                  }
+                }
+                return origWrite.call(this, chunk, ...args);
+              };
+
+              const origEnd = res.end;
+              res.end = function(chunk, ...args) {
+                if (chunk && typeof chunk !== 'function') {
+                  this.write(chunk);
+                  return origEnd.call(this, undefined, ...args);
+                }
+                return origEnd.call(this, chunk, ...args);
+              };
+
+              if (handler) handler(req, res);
+            });
