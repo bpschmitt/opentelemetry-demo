@@ -43,7 +43,7 @@ func main() {
 func runHandler(action, target string, cfg *Config) {
 	loadConfig(cfg)
 	switch target {
-	case "account", "resources":
+	case "account", "resources", "browser":
 		handleTerraform(action, target, cfg)
 	case "docker":
 		handleDocker(action, cfg)
@@ -74,7 +74,6 @@ func interactiveLoop(cfg *Config) {
 		fmt.Println("  4. Exit")
 		fmt.Printf("\n%sSelection: %s", ColorCyan, ColorReset)
 
-		// Total Lines: 8 (State) + 2 (Header) + 4 (Options) + 1 (Newline) + 1 (Input) = 16
 		lastLines = 16
 
 		if !scanner.Scan() {
@@ -108,7 +107,6 @@ func interactiveLoop(cfg *Config) {
 			fmt.Println("  5. <-- Back to Action Menu")
 			fmt.Printf("\n%sSelection: %s", ColorCyan, ColorReset)
 
-			// Total Lines: 8 (State) + 2 (Header) + 5 (Options) + 1 (Newline) + 1 (Input) = 17
 			step2Lines = 17
 
 			if !scanner.Scan() {
@@ -214,11 +212,6 @@ func parseArgs() (Config, []string) {
 				cfg.ReadonlyUserEmail = val
 			case "TF_VAR_READONLY_USER_NAME":
 				cfg.ReadonlyUserName = val
-			case "BROWSER_LICENSE_KEY", "BROWSER_APPLICATION_ID", "BROWSER_ACCOUNT_ID", "BROWSER_TRUST_KEY", "BROWSER_AGENT_ID":
-				if cfg.Browser == nil {
-					cfg.Browser = make(map[string]string)
-				}
-				cfg.Browser[strings.TrimPrefix(key, "BROWSER_")] = val
 			}
 		} else {
 			positionals = append(positionals, arg)
@@ -255,13 +248,6 @@ GLOBAL FLAGS:
 
 INSTALL FLAGS:
   --NEW_RELIC_LICENSE_KEY     - New Relic License Key (ends in NRAL; K8s/Docker only)
-
-BROWSER FLAGS (Used if NEW_RELIC_ENABLE_BROWSER is true):
-  --BROWSER_LICENSE_KEY       - New Relic Browser License Key
-  --BROWSER_APPLICATION_ID    - New Relic Browser App ID
-  --BROWSER_ACCOUNT_ID        - New Relic Browser Account ID
-  --BROWSER_TRUST_KEY         - New Relic Browser Trust Key
-  --BROWSER_AGENT_ID          - New Relic Browser Agent ID
 
 TERRAFORM RESOURCES FLAGS (Required for 'resources' target):
   --NEW_RELIC_API_KEY           - New Relic User API Key (starts with NRAK-)

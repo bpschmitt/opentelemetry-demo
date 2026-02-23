@@ -259,6 +259,9 @@ services:
   frontend:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend
     container_name: frontend
+    volumes:
+      - ../docker/config/monkey-patch.js:/app/monkey-patch.js:z
+    command: [ "--require=./Instrumentation.js", "--require=./monkey-patch.js", "server.js" ]
     build:
       context: ./
       dockerfile: ${FRONTEND_DOCKERFILE}
