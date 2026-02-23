@@ -131,6 +131,14 @@ $BODY_DESC
 EOF
 )
 
+# Skip creating a new PR if an open chart-update PR already exists
+EXISTING_PR=$(gh pr list --state open --repo "$TARGET_REPO" --base main \
+  --json number,headRefName --jq '.[] | select(.headRefName | startswith("chore/update-charts_")) | .number' | head -1)
+if [ -n "$EXISTING_PR" ]; then
+  echo "An open chart update PR already exists (#$EXISTING_PR). Skipping creation of a new PR."
+  exit 0
+fi
+
 git checkout -b chore/update-charts_$TS
 git commit -a -m "$COMMIT_MSG"
 git push -u origin chore/update-charts_$TS
