@@ -19,7 +19,7 @@ deployment:
     extraConfig:
       connectors:
         spanmetrics:
-          metrics_flush_interval: 30s
+          metrics_flush_interval: 15s
           aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
           dimensions:
             - name: http.method
